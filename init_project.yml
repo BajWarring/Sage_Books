@@ -1,0 +1,24 @@
+name: Initialize Sage Books
+on: workflow_dispatch # Allows you to run this manually once
+
+jobs:
+  initialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
+      - name: Create Flutter Project
+        run: |
+          # This command sets the App Name and Package Name everywhere
+          flutter create --org com.sage --project-name books .
+          
+      - name: Commit Files
+        run: |
+          git config --global user.name "Sage-Bot"
+          git config --global user.email "bot@github.com"
+          git add .
+          git commit -m "Initial Sage Books template with com.sage.books"
+          git push
