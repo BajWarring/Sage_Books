@@ -1,5 +1,7 @@
 name: Initialize Sage Books
-on: workflow_dispatch # Allows you to run this manually once
+on:
+  push:
+    branches: [ main ] # This makes it run AUTOMATICALLY when you save it
 
 jobs:
   initialize:
