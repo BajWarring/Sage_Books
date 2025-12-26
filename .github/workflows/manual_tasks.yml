@@ -64,13 +64,23 @@ jobs:
         if: github.event.inputs.task == 'Build Release APK'
         run: flutter build apk --release --no-tree-shake-icons
 
-      # Task: Android Signing Report
+     # Task: Android Signing Report
       - name: Android Signing Report
         if: github.event.inputs.task == 'Signing Report'
         run: |
+          # 1. Enter the android directory
           cd android
+          
+          # 2. Check if gradlew exists, if not, try to generate it
+          if [ ! -f "gradlew" ]; then
+            echo "gradlew missing! Attempting to restore from Flutter..."
+            flutter build apk --debug --dry-run
+          fi
+          
+          # 3. Grant permission and run
           chmod +x gradlew
           ./gradlew signingReport
+
 
       # Upload Artifacts (Only if a Build task was chosen)
       - name: Upload APK
