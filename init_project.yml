@@ -1,27 +1,41 @@
 name: Initialize Sage Books
 on:
   push:
-    branches: [ main ] # This makes it run AUTOMATICALLY when you save it
+    branches: [ main ]
+  workflow_dispatch: 
 
 jobs:
   initialize:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          
-      - name: Create Flutter Project
+          flutter-version: '3.38.5'
+
+      - name: Create Sage Books Template
         run: |
-          # This command sets the App Name and Package Name everywhere
-          flutter create --org com.sage --project-name books .
+          # The magic command:
+          # --org com.sage sets the domain
+          # --project-name books sets the app id
+          # . tells flutter to create it in the current folder
+          flutter create --org com.sage --project-name books --description "Cloud Cash Management" --platforms=android,ios,web .
           
-      - name: Commit Files
+      - name: Commit and Push Template
         run: |
           git config --global user.name "Sage-Bot"
           git config --global user.email "bot@github.com"
           git add .
-          git commit -m "Initial Sage Books template with com.sage.books"
-          git push
-          
+          # Check if there are changes to avoid error on empty commit
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chore: initialize Sage Books with com.sage.books"
+            git push
+          else
+            echo "No changes to commit"
+          fi
