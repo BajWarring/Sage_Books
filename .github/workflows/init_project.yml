@@ -1,0 +1,48 @@
+name: Initialize Sage Books
+on:
+  push:
+    branches: [ main ] # This triggers it automatically on save!
+  workflow_dispatch:   # This keeps the manual button as a backup
+
+permissions:
+  contents: write      # MANDATORY: Allows the bot to push the new files
+
+jobs:
+  initialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.38.5'
+
+      - name: Create Sage Books Template
+        run: |
+          # Delete the current folder contents except .github
+          find . -maxdepth 1 ! -name '.github' ! -name '.' ! -name '..' -exec rm -rf {} +
+          # Generate the project
+          flutter create --org com.sage --project-name books --platforms=android,ios,web .
+          
+      - name: Commit and Push Template
+        run: |
+          git config --global user.name "Sage-Bot"
+          git config --global user.email "bot@github.com"
+          git add .
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chore: initialize Sage Books with com.sage.books"
+            git push origin main
+          else
+            echo "No changes to commit"
+          fi
