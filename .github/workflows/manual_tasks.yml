@@ -1,0 +1,85 @@
+name: Sage Books Command Center
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Select the Flutter Task to run'
+        required: true
+        default: 'analyze'
+        type: choice
+        options:
+          - 'build_apk_debug'
+          - 'build_apk_release'
+          - 'analyze'
+          - 'clean'
+          - 'pub_get'
+          - 'pub_outdated'
+          - 'signing_report'
+
+permissions:
+  contents: read
+
+jobs:
+  run-task:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.38.5'
+
+      # Task: Flutter Clean
+      - name: Flutter Clean
+        if: github.event.inputs.task == 'clean'
+        run: flutter clean
+
+      # Task: Flutter Pub Get
+      - name: Flutter Pub Get
+        if: github.event.inputs.task == 'pub_get'
+        run: flutter pub get
+
+      # Task: Flutter Pub Outdated
+      - name: Flutter Pub Outdated
+        if: github.event.inputs.task == 'pub_outdated'
+        run: flutter pub outdated
+
+      # Task: Flutter Analyse
+      - name: Flutter Analyse
+        if: github.event.inputs.task == 'analyze'
+        run: flutter analyze .
+
+      # Task: Build APK Debug
+      - name: Build APK Debug
+        if: github.event.inputs.task == 'build_apk_debug'
+        run: flutter build apk --debug
+
+      # Task: Build APK Release
+      - name: Build APK Release
+        if: github.event.inputs.task == 'build_apk_release'
+        run: flutter build apk --release --no-tree-shake-icons
+
+      # Task: Android Signing Report
+      - name: Android Signing Report
+        if: github.event.inputs.task == 'signing_report'
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew signingReport
+
+      # Upload Artifacts (Only for APK builds)
+      - name: Upload APK Artifact
+        if: contains(github.event.inputs.task, 'build_apk')
+        uses: actions/upload-artifact@v4
+        with:
+          name: SageBooks-${{ github.event.inputs.task }}
+          path: build/app/outputs/flutter-apk/*.apk
