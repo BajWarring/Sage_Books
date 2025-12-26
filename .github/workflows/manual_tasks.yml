@@ -3,21 +3,17 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: 'Select the Flutter Task to run'
+        description: 'Run Specific Task'
         required: true
-        default: 'analyze'
         type: choice
         options:
-          - 'build_apk_debug'
-          - 'build_apk_release'
-          - 'analyze'
-          - 'clean'
-          - 'pub_get'
-          - 'pub_outdated'
-          - 'signing_report'
-
-permissions:
-  contents: read
+          - 'Build Debug APK'
+          - 'Build Release APK'
+          - 'Analyze'
+          - 'Clean'
+          - 'Pub Get'
+          - 'Pub Outdated'
+          - 'Signing Report'
 
 jobs:
   run-task:
@@ -40,46 +36,46 @@ jobs:
 
       # Task: Flutter Clean
       - name: Flutter Clean
-        if: github.event.inputs.task == 'clean'
+        if: github.event.inputs.task == 'Clean'
         run: flutter clean
 
       # Task: Flutter Pub Get
       - name: Flutter Pub Get
-        if: github.event.inputs.task == 'pub_get'
+        if: github.event.inputs.task == 'Pub Get'
         run: flutter pub get
 
       # Task: Flutter Pub Outdated
       - name: Flutter Pub Outdated
-        if: github.event.inputs.task == 'pub_outdated'
+        if: github.event.inputs.task == 'Pub Outdated'
         run: flutter pub outdated
 
       # Task: Flutter Analyse
       - name: Flutter Analyse
-        if: github.event.inputs.task == 'analyze'
+        if: github.event.inputs.task == 'Analyze'
         run: flutter analyze .
 
       # Task: Build APK Debug
       - name: Build APK Debug
-        if: github.event.inputs.task == 'build_apk_debug'
+        if: github.event.inputs.task == 'Build Debug APK'
         run: flutter build apk --debug
 
       # Task: Build APK Release
       - name: Build APK Release
-        if: github.event.inputs.task == 'build_apk_release'
+        if: github.event.inputs.task == 'Build Release APK'
         run: flutter build apk --release --no-tree-shake-icons
 
       # Task: Android Signing Report
       - name: Android Signing Report
-        if: github.event.inputs.task == 'signing_report'
+        if: github.event.inputs.task == 'Signing Report'
         run: |
           cd android
           chmod +x gradlew
           ./gradlew signingReport
 
-      # Upload Artifacts (Only for APK builds)
-      - name: Upload APK Artifact
-        if: contains(github.event.inputs.task, 'build_apk')
+      # Upload Artifacts (Only if a Build task was chosen)
+      - name: Upload APK
+        if: contains(github.event.inputs.task, 'Build')
         uses: actions/upload-artifact@v4
         with:
-          name: SageBooks-${{ github.event.inputs.task }}
+          name: SageBooks-APK
           path: build/app/outputs/flutter-apk/*.apk
