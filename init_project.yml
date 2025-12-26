@@ -22,3 +22,4 @@ jobs:
           git add .
           git commit -m "Initial Sage Books template with com.sage.books"
           git push
+          
