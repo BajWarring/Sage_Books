@@ -1,6 +1,6 @@
 name: Initialize Sage Books
 on:
-  workflow_dispatch: # This makes it strictly manual
+  workflow_dispatch: # Manual trigger only
 
 permissions:
   contents: write
@@ -22,18 +22,41 @@ jobs:
 
       - name: Create Sage Books Template
         run: |
-          # 1. Backup the .git folder to prevent "fatal: not a git repository"
+          # 1. Backup existing Git metadata
           cp -r .git /tmp/.git_backup
           
-          # 2. Clear out the root directory (keeping .github)
+          # 2. Wipe the directory except for the .github folder
           find . -maxdepth 1 ! -name '.github' ! -name '.' ! -name '..' -exec rm -rf {} +
           
-          # 3. Create the project with correct package name
+          # 3. Create the Flutter project
           flutter create --org com.sage --project-name books --platforms=android,ios,web .
           
-          # 4. Rename display label to "Sage Books"
-          sed -i 's/android:label="books"/android:label="Sage Books"/g' android/app/src/main/AndroidManifest.xml
+          # 4. Force-rename the Android label for 'Sage Books'
+          if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+            sed -i 's/android:label="books"/android:label="Sage Books"/g' android/app/src/main/AndroidManifest.xml
+          fi
           
+          # 5. Restore Git metadata
+          rm -rf .git
+          cp -r /tmp/.git_backup .git
+          
+      - name: Commit and Push Template
+        run: |
+          git config --global user.name "Sage-Bot"
+          git config --global user.email "bot@github.com"
+          
+          # Force Git to see the new files
+          git add -A
+          
+          # Verify files exist before pushing
+          if [ -d "android" ]; then
+            echo "SUCCESS: Android folder found."
+            git commit -m "chore: initialize Sage Books template"
+            git push origin main
+          else
+            echo "ERROR: Flutter create failed to generate files in the current directory."
+            exit 1
+          fi
           # 5. Restore the .git folder
           rm -rf .git
           cp -r /tmp/.git_backup .git
