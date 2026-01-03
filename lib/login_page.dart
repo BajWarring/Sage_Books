@@ -5,6 +5,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:ui' as ui; // Required for Glassmorphism blur
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -48,33 +49,33 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       }
 
       print("Success! Signed in as: ${googleUser.displayName}");
-      // Navigate to Home Page here...
+      // TODO: Navigate to Home Page here
       
     } catch (e) {
       print("Error signing in: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login Failed: $e")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Login Failed: $e")),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- UI: EXACT REPLICA OF HTML ---
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFFF8FAFC), // Slate 50
-          // The subtle mesh gradient from CSS
+          color: Color(0xFFF8FAFC), // Slate 50 background
           image: DecorationImage(
-            image: NetworkImage("https://grainy-gradients.vercel.app/noise.svg"), // Optional noise texture
+            image: NetworkImage("https://grainy-gradients.vercel.app/noise.svg"),
             fit: BoxFit.cover,
             opacity: 0.05,
           ),
         ),
         child: Stack(
           children: [
-            // Floating Background Shapes (CSS: animate-pulse)
+            // --- Floating Background Shapes ---
             Positioned(
               top: 40,
               right: 40,
@@ -83,10 +84,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             Positioned(
               bottom: 80,
               left: 40,
-              child: _buildBlurBlob(Colors.rose.shade200.withOpacity(0.4)),
+              // Using Pink because 'Rose' is not a default Flutter color
+              child: _buildBlurBlob(Colors.pink.shade200.withOpacity(0.4)),
             ),
 
-            // Main Content Center
+            // --- Main Content Center ---
             Center(
               child: SingleChildScrollView(
                 child: Padding(
@@ -98,8 +100,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       ClipRRect(
                         borderRadius: BorderRadius.circular(32),
                         child: BackdropFilter(
-                          filter: android.graphics.drawable.BitmapDrawable ? null :  // Optimization check
-                                  ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                          // Standard Flutter blur filter
+                          filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                           child: Container(
                             constraints: const BoxConstraints(maxWidth: 350),
                             padding: const EdgeInsets.all(28),
@@ -118,17 +120,17 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Lottie Animation (Direct from URL in HTML)
+                                // --- Lottie Animation (Local Asset) ---
                                 SizedBox(
                                   width: 200,
                                   height: 200,
-                                  child: Lottie.network(
-                                    'https://lottie.host/ad699a04-a9c0-4f5c-b885-3fdedf165a10/AQbdIENiFr.lottie',
+                                  child: Lottie.asset(
+                                    'assets/animations/Paperplane.json',
                                     fit: BoxFit.contain,
                                   ),
                                 ),
 
-                                // Header
+                                // --- Header ---
                                 Text(
                                   "Welcome",
                                   style: GoogleFonts.outfit(
@@ -139,21 +141,21 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 ),
                                 const SizedBox(height: 24),
 
-                                // Email Input
+                                // --- Email Input ---
                                 _buildInput(
                                   icon: PhosphorIcons.envelopeSimple(PhosphorIconsStyle.bold),
                                   hint: "Email",
                                 ),
                                 const SizedBox(height: 14),
 
-                                // Password Input
+                                // --- Password Input ---
                                 _buildInput(
                                   icon: PhosphorIcons.lockKey(PhosphorIconsStyle.bold),
                                   hint: "Password",
                                   isPassword: true,
                                 ),
 
-                                // Forgot Link
+                                // --- Forgot Link ---
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: TextButton(
@@ -169,7 +171,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   ),
                                 ),
 
-                                // Login Button
+                                // --- Login Button ---
                                 SizedBox(
                                   width: double.infinity,
                                   height: 48,
@@ -178,7 +180,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF4F46E5), // Indigo 600
                                       elevation: 4,
-                                      shadowColor: const Color(0xFFC7D2FE), // Indigo 200
+                                      shadowColor: const Color(0xFFC7D2FE),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -193,7 +195,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   ),
                                 ),
 
-                                // OR Divider
+                                // --- OR Divider ---
                                 Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 20),
                                   child: Row(
@@ -206,7 +208,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                           style: GoogleFonts.outfit(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF94A3B8), // Slate 400
+                                            color: const Color(0xFF94A3B8),
                                           ),
                                         ),
                                       ),
@@ -215,7 +217,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   ),
                                 ),
 
-                                // Google Button
+                                // --- Google Button ---
                                 SizedBox(
                                   width: double.infinity,
                                   height: 48,
@@ -224,7 +226,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     icon: SizedBox(
                                       width: 18,
                                       height: 18,
-                                      // Using standard Google Icon or SVG
                                       child: Image.network('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg'), 
                                     ),
                                     label: Text(
@@ -245,7 +246,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   ),
                                 ),
 
-                                // Footer
+                                // --- Footer ---
                                 const SizedBox(height: 24),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -287,7 +288,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
-  // Helper for Input Fields
+  // --- Helper: Input Fields ---
   Widget _buildInput({required IconData icon, required String hint, bool isPassword = false}) {
     return Container(
       decoration: BoxDecoration(
@@ -307,7 +308,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
-                    _isPasswordVisible ? PhosphorIcons.eye(PhosphorIconsStyle.bold) : PhosphorIcons.eyeSlash(PhosphorIconsStyle.bold),
+                    _isPasswordVisible 
+                      ? PhosphorIcons.eye(PhosphorIconsStyle.bold) 
+                      : PhosphorIcons.eyeSlash(PhosphorIconsStyle.bold),
                     color: const Color(0xFF94A3B8),
                   ),
                   onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
@@ -322,7 +325,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
-  // Helper for Background Blobs
+  // --- Helper: Background Blobs ---
   Widget _buildBlurBlob(Color color) {
     return Container(
       width: 140,
@@ -338,4 +341,3 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 }
-// Note: You need import 'dart:ui' as ui; at the top
