@@ -1,0 +1,39 @@
+name: Build Android APK (Fast)
+on: workflow_dispatch # Manual Trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Setup Java with Gradle Caching
+      # This saves all the Android download parts (Gradle)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle' # <--- MAGIC LINE 1: Caches Android build tools
+
+      # 2. Setup Flutter with SDK Caching
+      # This saves the entire Flutter SDK so it doesn't redownload
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true     # <--- MAGIC LINE 2: Caches Flutter SDK
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sage-books-release
+          path: build/app/outputs/flutter-apk/app-release.apk
