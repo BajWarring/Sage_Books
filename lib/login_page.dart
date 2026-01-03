@@ -1,0 +1,341 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+  bool _isPasswordVisible = false;
+
+  // --- LOGIC: Google Sign In ---
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      // 1. Trigger Google Sign In Flow
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return; // User canceled
+
+      // 2. Obtain Auth Details
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // 3. Sign in to Firebase
+      final UserCredential userCredential = 
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // 4. Save User to Firestore Database
+      if (userCredential.user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          'email': googleUser.email,
+          'displayName': googleUser.displayName,
+          'photoUrl': googleUser.photoUrl,
+          'lastLogin': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      print("Success! Signed in as: ${googleUser.displayName}");
+      // Navigate to Home Page here...
+      
+    } catch (e) {
+      print("Error signing in: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login Failed: $e")),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // --- UI: EXACT REPLICA OF HTML ---
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFF8FAFC), // Slate 50
+          // The subtle mesh gradient from CSS
+          image: DecorationImage(
+            image: NetworkImage("https://grainy-gradients.vercel.app/noise.svg"), // Optional noise texture
+            fit: BoxFit.cover,
+            opacity: 0.05,
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Floating Background Shapes (CSS: animate-pulse)
+            Positioned(
+              top: 40,
+              right: 40,
+              child: _buildBlurBlob(Colors.indigo.shade200.withOpacity(0.4)),
+            ),
+            Positioned(
+              bottom: 80,
+              left: 40,
+              child: _buildBlurBlob(Colors.rose.shade200.withOpacity(0.4)),
+            ),
+
+            // Main Content Center
+            Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // === GLASSMORPHISM CARD ===
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(32),
+                        child: BackdropFilter(
+                          filter: android.graphics.drawable.BitmapDrawable ? null :  // Optimization check
+                                  ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 350),
+                            padding: const EdgeInsets.all(28),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.85),
+                              borderRadius: BorderRadius.circular(32),
+                              border: Border.all(color: Colors.white.withOpacity(0.5)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 50,
+                                  offset: const Offset(0, 25),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Lottie Animation (Direct from URL in HTML)
+                                SizedBox(
+                                  width: 200,
+                                  height: 200,
+                                  child: Lottie.network(
+                                    'https://lottie.host/ad699a04-a9c0-4f5c-b885-3fdedf165a10/AQbdIENiFr.lottie',
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+
+                                // Header
+                                Text(
+                                  "Welcome",
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF1E293B), // Slate 800
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Email Input
+                                _buildInput(
+                                  icon: PhosphorIcons.envelopeSimple(PhosphorIconsStyle.bold),
+                                  hint: "Email",
+                                ),
+                                const SizedBox(height: 14),
+
+                                // Password Input
+                                _buildInput(
+                                  icon: PhosphorIcons.lockKey(PhosphorIconsStyle.bold),
+                                  hint: "Password",
+                                  isPassword: true,
+                                ),
+
+                                // Forgot Link
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () {},
+                                    child: Text(
+                                      "Forgot Password?",
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF94A3B8), // Slate 400
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // Login Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: ElevatedButton(
+                                    onPressed: () {},
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF4F46E5), // Indigo 600
+                                      elevation: 4,
+                                      shadowColor: const Color(0xFFC7D2FE), // Indigo 200
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      "Login",
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // OR Divider
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 20),
+                                  child: Row(
+                                    children: [
+                                      Expanded(child: Divider(color: Colors.grey.shade200)),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        child: Text(
+                                          "OR",
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF94A3B8), // Slate 400
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(child: Divider(color: Colors.grey.shade200)),
+                                    ],
+                                  ),
+                                ),
+
+                                // Google Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _handleGoogleSignIn,
+                                    icon: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      // Using standard Google Icon or SVG
+                                      child: Image.network('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg'), 
+                                    ),
+                                    label: Text(
+                                      "Continue with Google",
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF334155), // Slate 700
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // Footer
+                                const SizedBox(height: 24),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      "Don't have an account?",
+                                      style: GoogleFonts.outfit(
+                                        color: const Color(0xFF64748B), // Slate 500
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {},
+                                      child: Text(
+                                        "Sign up",
+                                        style: GoogleFonts.outfit(
+                                          color: const Color(0xFF4F46E5),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper for Input Fields
+  Widget _buildInput({required IconData icon, required String hint, bool isPassword = false}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)), // Slate 200
+      ),
+      child: TextField(
+        obscureText: isPassword ? !_isPasswordVisible : false,
+        style: GoogleFonts.outfit(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: const Color(0xFF1E293B),
+        ),
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: const Color(0xFF94A3B8), size: 20),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    _isPasswordVisible ? PhosphorIcons.eye(PhosphorIconsStyle.bold) : PhosphorIcons.eyeSlash(PhosphorIconsStyle.bold),
+                    color: const Color(0xFF94A3B8),
+                  ),
+                  onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                )
+              : null,
+          hintText: hint,
+          hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8)),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+      ),
+    );
+  }
+
+  // Helper for Background Blobs
+  Widget _buildBlurBlob(Color color) {
+    return Container(
+      width: 140,
+      height: 140,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+        child: Container(color: Colors.transparent),
+      ),
+    );
+  }
+}
+// Note: You need import 'dart:ui' as ui; at the top
