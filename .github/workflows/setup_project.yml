@@ -1,0 +1,41 @@
+name: Initialize Sage Books
+on: workflow_dispatch  # This makes it a Manual Button
+
+jobs:
+  generate-source:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Explicitly allow writing back to repo
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
+      - name: Create Flutter App
+        run: |
+          # 1. Create app with correct package name (com.sage.books)
+          # We use project-name 'books' so the ID becomes com.sage.books
+          flutter create --org com.sage --project-name books .
+          
+          # 2. Rename the Display Name (Android)
+          # Finds 'android:label="books"' and replaces it with 'Sage Books'
+          sed -i 's/android:label="books"/android:label="Sage Books"/' android/app/src/main/AndroidManifest.xml
+          
+          # 3. Rename the Display Name (iOS)
+          sed -i 's/<string>books<\/string>/<string>Sage Books<\/string>/' ios/Runner/Info.plist
+          
+          # 4. Update the description in pubspec.yaml
+          sed -i 's/description: A new Flutter project./description: Sage Books mobile application./' pubspec.yaml
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add .
+          git commit -m "Initialize Flutter App: Sage Books (com.sage.books)"
+          git push
