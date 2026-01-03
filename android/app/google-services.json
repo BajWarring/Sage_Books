@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1054108357356",
+    "project_id": "sage-81750",
+    "storage_bucket": "sage-81750.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1054108357356:android:6e23c857d93f3b97a84bc9",
+        "android_client_info": {
+          "package_name": "com.sage.books"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1054108357356-7ecs3ulcvaa72nle2odli6cet7dnlb31.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sage.books",
+            "certificate_hash": "fa2b1375de599f8ccd54eda15c97a88c9bd70852"
+          }
+        },
+        {
+          "client_id": "1054108357356-81tenhgu7npbvmcdg728v7ltel0tcgj7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjwwlO-Dyw-I5gykFpEPQ4kwb3kxVgJWw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1054108357356-81tenhgu7npbvmcdg728v7ltel0tcgj7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
