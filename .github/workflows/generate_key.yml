@@ -1,0 +1,24 @@
+name: Generate Permanent Keystore
+on: workflow_dispatch
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Keystore
+        run: |
+          # 1. Create the key file
+          keytool -genkey -v -keystore upload-keystore.jks \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -alias upload -dname "CN=SageBooks, OU=App, O=Sage, L=City, S=State, C=US" \
+            -storepass sage123 -keypass sage123
+
+          # 2. Get the SHA-1 Fingerprint (You need this for Firebase!)
+          echo "----------------------------------------"
+          echo "SAVE THIS SHA-1 FOR FIREBASE:"
+          keytool -list -v -keystore upload-keystore.jks -alias upload -storepass sage123 | grep "SHA1:"
+          echo "----------------------------------------"
+
+          # 3. Convert Keystore to Text (Base64) so you can save it in Secrets
+          echo "COPY THE TEXT BELOW FOR GITHUB SECRET:"
+          base64 upload-keystore.jks -w 0
