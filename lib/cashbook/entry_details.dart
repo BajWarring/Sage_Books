@@ -44,8 +44,12 @@ class EntryDetailsPage extends StatelessWidget {
             onPressed: () {
                // EDIT: Open Entry Form with Data
                Navigator.push(context, MaterialPageRoute(builder: (_) => EntryForm(
-                 user: user, cashbookId: cashbookId, initialType: data['type'],
-                 existingEntryId: entryId, existingData: data,
+                 user: user, 
+                 cashbookId: cashbookId, 
+                 initialType: data['type'],
+                 existingEntryId: entryId, 
+                 existingData: data,
+                 currencySymbol: currencySymbol, // <--- FIXED: Added this line
                )));
             },
             child: Text("Edit", style: GoogleFonts.outfit(color: const Color(0xFF4F46E5), fontWeight: FontWeight.bold)),
@@ -128,7 +132,6 @@ class EntryDetailsPage extends StatelessWidget {
                     time: DateFormat('MMM d, h:mm a').format((data['createdAt'] as Timestamp).toDate()),
                     isLast: true,
                   ),
-                  // Note: Real editing logs would require a sub-collection. This is static for creation.
                 ],
               ),
             ),
@@ -139,7 +142,7 @@ class EntryDetailsPage extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade100))),
         child: ElevatedButton.icon(
-          onPressed: () {}, // TODO: Share Logic
+          onPressed: () {}, // Share Logic Placeholder
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF4F46E5),
             padding: const EdgeInsets.symmetric(vertical: 16),
