@@ -125,7 +125,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   width: 200,
                                   height: 200,
                                   child: Lottie.asset(
-                                    'assets/animations/Paperplane.json',
+                                    'assets/animations/paperplane.json',
                                     fit: BoxFit.contain,
                                   ),
                                 ),
