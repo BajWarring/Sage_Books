@@ -65,7 +65,8 @@ class _DashboardTabState extends State<DashboardTab> {
                   icon: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
-                    child: const Icon(PhosphorIcons.x, size: 16, color: Colors.grey),
+                    // FIX 1: Added (PhosphorIconsStyle.bold)
+                    child: Icon(PhosphorIcons.x(PhosphorIconsStyle.bold), size: 16, color: Colors.grey),
                   ),
                 )
               ],
@@ -134,7 +135,8 @@ class _DashboardTabState extends State<DashboardTab> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                icon: const Icon(PhosphorIcons.check, size: 18, color: Colors.white),
+                // FIX 2: Added (PhosphorIconsStyle.bold)
+                icon: Icon(PhosphorIcons.check(PhosphorIconsStyle.bold), size: 18, color: Colors.white),
                 label: Text("Create Cashbook", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
@@ -197,9 +199,10 @@ class _DashboardTabState extends State<DashboardTab> {
           ],
         ),
         actions: [
-          _buildHeaderBtn(PhosphorIcons.magnifyingGlass),
-          _buildHeaderBtn(PhosphorIcons.slidersHorizontal),
-          _buildHeaderBtn(PhosphorIcons.dotsThreeCircle),
+          // FIX 3: Added (PhosphorIconsStyle.bold) to all header icons
+          _buildHeaderBtn(PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)),
+          _buildHeaderBtn(PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.bold)),
+          _buildHeaderBtn(PhosphorIcons.dotsThreeCircle(PhosphorIconsStyle.bold)),
           const SizedBox(width: 16),
         ],
       ),
@@ -246,7 +249,8 @@ class _DashboardTabState extends State<DashboardTab> {
                           color: const Color(0xFFEFF6FF), // Blue 50
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(PhosphorIcons.plus, color: Color(0xFF2563EB)),
+                        // FIX 4: Added (PhosphorIconsStyle.bold)
+                        child: Icon(PhosphorIcons.plus(PhosphorIconsStyle.bold), color: const Color(0xFF2563EB)),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -295,7 +299,8 @@ class _DashboardTabState extends State<DashboardTab> {
                 backgroundColor: const Color(0xFF0F172A),
                 elevation: 4,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: const Icon(PhosphorIcons.plus, color: Colors.white, size: 24),
+                // FIX 5: Added (PhosphorIconsStyle.bold)
+                child: Icon(PhosphorIcons.plus(PhosphorIconsStyle.bold), color: Colors.white, size: 24),
               ),
             ),
           );
@@ -347,8 +352,9 @@ class _DashboardTabState extends State<DashboardTab> {
                   color: isPositive ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
                   shape: BoxShape.circle,
                 ),
+                // FIX 6: Added (PhosphorIconsStyle.duotone) to match HTML design
                 child: Icon(
-                  PhosphorIcons.notebook, 
+                  PhosphorIcons.notebook(PhosphorIconsStyle.duotone), 
                   color: isPositive ? const Color(0xFF10B981) : const Color(0xFFE11D48), 
                   size: 20
                 ),
