@@ -1,0 +1,31 @@
+name: Get SHA Fingerprints
+on: workflow_dispatch
+
+jobs:
+  show_fingerprints:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decode Keystore from Secrets
+        run: |
+          # 1. Check if the secret exists
+          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "❌ ERROR: You have not saved 'KEYSTORE_BASE64' in GitHub Secrets yet."
+            exit 1
+          fi
+
+          # 2. Decode the secret back into a file
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > upload-keystore.jks
+
+      - name: 🖨️ PRINT SHA FINGERPRINTS
+        run: |
+          echo "======================================================="
+          echo "👇 COPY THESE FINGERPRINTS TO FIREBASE CONSOLE 👇"
+          echo "======================================================="
+          
+          # 3. Use keytool to read the file and show the SHA-1 and SHA-256
+          keytool -list -v \
+            -keystore upload-keystore.jks \
+            -alias upload \
+            -storepass sage123
+            
+          echo "======================================================="
