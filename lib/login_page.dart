@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui' as ui; // Required for Glassmorphism blur
+import 'package:sage_books/home_page.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -48,9 +50,18 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         }, SetOptions(merge: true));
       }
 
+
       print("Success! Signed in as: ${googleUser.displayName}");
-      // TODO: Navigate to Home Page here
       
+      if (mounted) {
+         Navigator.of(context).pushReplacement(
+           MaterialPageRoute(
+             builder: (context) => HomePage(user: userCredential.user!),
+           ),
+         );
+      }
+      
+
     } catch (e) {
       print("Error signing in: $e");
       if (mounted) {
