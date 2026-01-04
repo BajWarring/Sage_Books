@@ -31,7 +31,7 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
 
-          // 2. The Bottom Navigation Bar (Custom implementation)
+          // 2. The Bottom Navigation Bar
           Positioned(
             left: 20,
             right: 20,
@@ -59,46 +59,11 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-
-          // 3. Floating Action Button (FAB)
-          // Only show on Cashbooks tab (Index 0)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutBack,
-            bottom: _selectedIndex == 0 ? 100 : 24, // Moves down if hidden
-            right: 20,
-            child: AnimatedScale(
-              scale: _selectedIndex == 0 ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: Container(
-                height: 56,
-                width: 56,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A), // Slate 900
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFCBD5E1), // Slate 300 shadow
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  onPressed: () {
-                     // Open Modal logic here (Future implementation)
-                  },
-                  icon: Icon(PhosphorIcons.plus(PhosphorIconsStyle.bold), color: Colors.white, size: 24),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  // Custom Nav Item to match HTML animation
   Widget _buildNavOneItem(String label, IconData icon, int index) {
     bool isActive = _selectedIndex == index;
     return Expanded(
@@ -110,7 +75,7 @@ class _HomePageState extends State<HomePage> {
           margin: const EdgeInsets.symmetric(horizontal: 4),
           height: 48,
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFFEEF2FF) : Colors.transparent, // Indigo 50
+            color: isActive ? const Color(0xFFEEF2FF) : Colors.transparent, 
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -118,13 +83,12 @@ class _HomePageState extends State<HomePage> {
             children: [
               Icon(
                 icon,
-                color: isActive ? const Color(0xFF4F46E5) : const Color(0xFF94A3B8), // Indigo 600 vs Slate 400
+                color: isActive ? const Color(0xFF4F46E5) : const Color(0xFF94A3B8),
                 size: 20,
               ),
-              // Animate text width
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                width: isActive ? 80 : 0, // Expands or shrinks
+                width: isActive ? 80 : 0,
                 child: ClipRect(
                   child: Center(
                     child: Text(
