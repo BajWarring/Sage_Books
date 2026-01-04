@@ -39,41 +39,29 @@ class _DashboardTabState extends State<DashboardTab> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Drag Handle
             Center(
               child: Container(
-                width: 48,
+                width: 48, 
                 height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(3),
-                ),
+                decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(3)),
               ),
             ),
             const SizedBox(height: 24),
-
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Add Cashbook",
-                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
-                ),
+                Text("Add Cashbook", style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
-                    // FIX 1: Added (PhosphorIconsStyle.bold)
                     child: Icon(PhosphorIcons.x(PhosphorIconsStyle.bold), size: 16, color: Colors.grey),
                   ),
                 )
               ],
             ),
             const SizedBox(height: 24),
-
-            // Form: Name
             Text("Cashbook Name", style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
             const SizedBox(height: 8),
             TextField(
@@ -82,7 +70,7 @@ class _DashboardTabState extends State<DashboardTab> {
               decoration: InputDecoration(
                 hintText: "e.g. Office Expenses",
                 hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8)),
-                filled: true,
+                filled: true, 
                 fillColor: const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
@@ -90,8 +78,6 @@ class _DashboardTabState extends State<DashboardTab> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Form: Currency
             Text("Currency", style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
@@ -108,34 +94,26 @@ class _DashboardTabState extends State<DashboardTab> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Create Button
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton.icon(
                 onPressed: () async {
                   if (nameController.text.isNotEmpty) {
-                    // SAVE TO FIREBASE
-                    await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(widget.user.uid)
-                        .collection('cashbooks')
-                        .add({
+                    await FirebaseFirestore.instance.collection('users').doc(widget.user.uid).collection('cashbooks').add({
                       'name': nameController.text,
                       'currency': selectedCurrency,
                       'createdAt': FieldValue.serverTimestamp(),
-                      'balance': 0.0, // Start with 0
+                      'balance': 0.0,
                     });
-                    Navigator.pop(context); // Close Modal
+                    Navigator.pop(context);
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0F172A), // Slate 900
+                  backgroundColor: const Color(0xFF0F172A),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                // FIX 2: Added (PhosphorIconsStyle.bold)
                 icon: Icon(PhosphorIcons.check(PhosphorIconsStyle.bold), size: 18, color: Colors.white),
                 label: Text("Create Cashbook", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
               ),
@@ -143,6 +121,143 @@ class _DashboardTabState extends State<DashboardTab> {
           ],
         ),
       ),
+    );
+  }
+
+  // --- ACTION: Show Options Popup (Long Press) ---
+  void _showOptionsDialog(BuildContext context, String docId, String bookName) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title
+              Text(
+                bookName,
+                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              
+              // Options List
+              _buildOptionItem(
+                icon: PhosphorIcons.bookOpen(PhosphorIconsStyle.duotone), 
+                text: "Book Details", 
+                color: const Color(0xFF334155),
+                onTap: () { Navigator.pop(context); /* TODO: Navigate to Details */ }
+              ),
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+              _buildOptionItem(
+                icon: PhosphorIcons.pencilSimple(PhosphorIconsStyle.duotone), 
+                text: "Edit Book", 
+                color: const Color(0xFF334155),
+                onTap: () { Navigator.pop(context); /* TODO: Show Edit Modal */ }
+              ),
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+              _buildOptionItem(
+                icon: PhosphorIcons.trash(PhosphorIconsStyle.duotone), 
+                text: "Delete Book", 
+                color: const Color(0xFFE11D48), // Rose 600
+                onTap: () {
+                  Navigator.pop(context); // Close Options
+                  _showDeleteConfirmation(context, docId, bookName); // Open Confirmation
+                }
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- ACTION: Delete Confirmation (Type to Delete) ---
+  void _showDeleteConfirmation(BuildContext context, String docId, String bookName) {
+    final confirmationController = TextEditingController();
+    bool isMatch = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Delete Cashbook?", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFFE11D48))),
+                    const SizedBox(height: 8),
+                    RichText(
+                      text: TextSpan(
+                        style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF64748B)),
+                        children: [
+                          const TextSpan(text: "This action cannot be undone. Type "),
+                          TextSpan(text: bookName, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                          const TextSpan(text: " to confirm."),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: confirmationController,
+                      onChanged: (val) {
+                        setState(() {
+                          isMatch = val == bookName;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: bookName,
+                        hintStyle: GoogleFonts.outfit(color: const Color(0xFFCBD5E1)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE11D48))),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text("Cancel", style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+                          ),
+                        ),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: isMatch ? () async {
+                              await FirebaseFirestore.instance.collection('users').doc(widget.user.uid).collection('cashbooks').doc(docId).delete();
+                              Navigator.pop(context);
+                            } : null, // Disabled until match
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFE11D48),
+                              disabledBackgroundColor: const Color(0xFFFDA4AF),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            child: Text("Delete", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -199,7 +314,6 @@ class _DashboardTabState extends State<DashboardTab> {
           ],
         ),
         actions: [
-          // FIX 3: Added (PhosphorIconsStyle.bold) to all header icons
           _buildHeaderBtn(PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)),
           _buildHeaderBtn(PhosphorIcons.slidersHorizontal(PhosphorIconsStyle.bold)),
           _buildHeaderBtn(PhosphorIcons.dotsThreeCircle(PhosphorIconsStyle.bold)),
@@ -207,7 +321,6 @@ class _DashboardTabState extends State<DashboardTab> {
         ],
       ),
 
-      // --- BODY: CONNECTED TO FIREBASE ---
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -216,14 +329,13 @@ class _DashboardTabState extends State<DashboardTab> {
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          // 1. Loading State
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
           final docs = snapshot.data?.docs ?? [];
 
-          // 2. EMPTY STATE (Big Center Button)
+          // EMPTY STATE (Big Center Button)
           if (docs.isEmpty) {
             return Center(
               child: GestureDetector(
@@ -249,7 +361,6 @@ class _DashboardTabState extends State<DashboardTab> {
                           color: const Color(0xFFEFF6FF), // Blue 50
                           shape: BoxShape.circle,
                         ),
-                        // FIX 4: Added (PhosphorIconsStyle.bold)
                         child: Icon(PhosphorIcons.plus(PhosphorIconsStyle.bold), color: const Color(0xFF2563EB)),
                       ),
                       const SizedBox(height: 16),
@@ -264,15 +375,18 @@ class _DashboardTabState extends State<DashboardTab> {
             );
           }
 
-          // 3. LIST STATE (Show List)
+          // LIST STATE
           return ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            itemCount: docs.length + 1, // +1 for spacer
+            itemCount: docs.length + 1,
             itemBuilder: (context, index) {
-              if (index == docs.length) return const SizedBox(height: 100); // Spacer
+              if (index == docs.length) return const SizedBox(height: 100);
 
-              final data = docs[index].data() as Map<String, dynamic>;
+              final doc = docs[index];
+              final data = doc.data() as Map<String, dynamic>;
+              
               return _buildBookCard(
+                docId: doc.id,
                 title: data['name'] ?? 'Untitled',
                 currency: data['currency'] ?? '\$',
                 balance: (data['balance'] ?? 0.0).toStringAsFixed(2),
@@ -282,15 +396,13 @@ class _DashboardTabState extends State<DashboardTab> {
         },
       ),
 
-      // --- FAB: LOGIC FOR VISIBILITY ---
+      // FAB
       floatingActionButton: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('users').doc(widget.user.uid).collection('cashbooks').snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const SizedBox(); // Hide if empty
-          
-          // SHOW IF DATA EXISTS
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const SizedBox();
           return Padding(
-            padding: const EdgeInsets.only(bottom: 80), // Push up above nav bar
+            padding: const EdgeInsets.only(bottom: 80),
             child: SizedBox(
               width: 56,
               height: 56,
@@ -299,7 +411,6 @@ class _DashboardTabState extends State<DashboardTab> {
                 backgroundColor: const Color(0xFF0F172A),
                 elevation: 4,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                // FIX 5: Added (PhosphorIconsStyle.bold)
                 child: Icon(PhosphorIcons.plus(PhosphorIconsStyle.bold), color: Colors.white, size: 24),
               ),
             ),
@@ -309,8 +420,8 @@ class _DashboardTabState extends State<DashboardTab> {
     );
   }
 
-  // --- WIDGET HELPERS ---
-  
+  // --- HELPERS ---
+
   Widget _buildHeaderBtn(IconData icon) {
     return Container(
       width: 36,
@@ -321,69 +432,109 @@ class _DashboardTabState extends State<DashboardTab> {
     );
   }
 
-  Widget _buildBookCard({required String title, required String currency, required String balance}) {
-    // Determine color based on balance (Simple Logic)
+  Widget _buildOptionItem({required IconData icon, required String text, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 12),
+            Text(text, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w500, color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🔴 RESTORED ORIGINAL UI CARD
+  Widget _buildBookCard({required String docId, required String title, required String currency, required String balance}) {
     final double val = double.tryParse(balance) ?? 0;
     final isPositive = val >= 0;
-    
-    // Extract Symbol
     String symbol = currency.split(' ')[1].replaceAll(RegExp(r'[()]'), '');
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), offset: const Offset(0, 2), blurRadius: 4)
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isPositive ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
-                  shape: BoxShape.circle,
-                ),
-                // FIX 6: Added (PhosphorIconsStyle.duotone) to match HTML design
-                child: Icon(
-                  PhosphorIcons.notebook(PhosphorIconsStyle.duotone), 
-                  color: isPositive ? const Color(0xFF10B981) : const Color(0xFFE11D48), 
-                  size: 20
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B)),
+    return GestureDetector(
+      // ✨ ADDED: LONG PRESS TO SHOW OPTIONS
+      onLongPress: () => _showOptionsDialog(context, docId, title),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.02), offset: const Offset(0, 2), blurRadius: 4)
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                // Icon Container
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isPositive ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2), // Emerald 50 vs Rose 50
+                    shape: BoxShape.circle,
                   ),
-                  Text(
-                    "Just now",
-                    style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF94A3B8)),
+                  child: Icon(
+                    PhosphorIcons.wallet(PhosphorIconsStyle.duotone), // Using Wallet as generic placeholder like original HTML used different icons
+                    color: isPositive ? const Color(0xFF10B981) : const Color(0xFFE11D48), 
+                    size: 20
                   ),
-                ],
-              ),
-            ],
-          ),
-          Text(
-            "$symbol $balance",
-            style: GoogleFonts.outfit(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: isPositive ? const Color(0xFF10B981) : const Color(0xFFE11D48),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B)),
+                    ),
+                    Text(
+                      "Updated just now",
+                      style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF94A3B8)),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-        ],
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  "$symbol $balance",
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isPositive ? const Color(0xFF10B981) : const Color(0xFFE11D48),
+                  ),
+                ),
+                // ✨ ADDED: The "Surplus/Deficit" Badge
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isPositive ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isPositive ? "Surplus" : "Deficit",
+                    style: GoogleFonts.outfit(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: isPositive ? const Color(0xFF10B981) : const Color(0xFFE11D48),
+                    ),
+                  ),
+                )
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
