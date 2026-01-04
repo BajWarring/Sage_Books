@@ -47,6 +47,9 @@ dependencies:
   flutter_svg: ^2.0.0      # For Google Logo
   glassmorphism_ui: ^0.3.0 # Optional helper, but we'll do manual for exact control
 
+  # Other Packages
+  intl: ^0.19.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
