@@ -226,8 +226,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     icon: SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: Image.network('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg'), 
-                                    ),
+                                      child: Image.network('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png'),
+                               ),
                                     label: Text(
                                       "Continue with Google",
                                       style: GoogleFonts.outfit(
