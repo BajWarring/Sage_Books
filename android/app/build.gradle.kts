@@ -21,41 +21,50 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.sage.books"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
-  // THIS SIGNING BLOCK
+    // --- SIGNING CONFIGURATION ---
     signingConfigs {
         create("release") {
-            // We hardcoded these in the workflow, so we hardcode them here
-            keyAlias = "upload"
-            keyPassword = "sage123"
-            storeFile = file("upload-keystore.jks")
-            storePassword = "sage123"
+            val keystoreFile = file("upload-keystore.jks")
+            
+            // 🛑 SAFETY CHECK: Only try to load the key if the Workflow created it.
+            // This prevents "File Not Found" crashes.
+            if (keystoreFile.exists()) {
+                keyAlias = "upload"
+                keyPassword = "sage123"
+                storeFile = keystoreFile
+                storePassword = "sage123"
+            } else {
+                // Fallback: If no key found, print a warning but don't crash.
+                // This lets the build continue using the default Android debug key.
+                println("⚠️ Keystore not found. Using default debug keystore.")
+                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            }
         }
     }
 
-    // BUILD TYPES TO USE THE KEY
+    // --- BUILD TYPES ---
     buildTypes {
         getByName("release") {
+            // Use the configuration we defined above
             signingConfig = signingConfigs.getByName("release")
+            // Disable code shrinking to prevent Firebase from breaking
             isMinifyEnabled = false
             isShrinkResources = false
         }
         getByName("debug") {
-            // MAGIC TRICK: Use the Release key for Debug too!
-            // This ensures SHA-1 is ALWAYS the same.
+            // MAGIC TRICK: Try to use the Release key for Debug too!
+            // This ensures SHA-1 is ALWAYS the same, fixing Google Sign-In issues.
             signingConfig = signingConfigs.getByName("release")
         }
     }
-
+}
 
 flutter {
     source = "../.."
