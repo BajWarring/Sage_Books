@@ -45,8 +45,8 @@ class SettingsTab extends StatelessWidget {
             width: 36,
             height: 36,
             margin: const EdgeInsets.only(right: 20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8FAFC),
               shape: BoxShape.circle,
             ),
             child: Icon(PhosphorIcons.bell(PhosphorIconsStyle.bold), size: 20, color: const Color(0xFF64748B)),
@@ -235,8 +235,9 @@ class SettingsTab extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(String title) {
+    // FIX: Changed 'mb: 12' to 'bottom: 12'
     return Padding(
-      padding: const EdgeInsets.only(left: 4, mb: 12),
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
       child: Text(
         title.toUpperCase(),
         style: GoogleFonts.outfit(
