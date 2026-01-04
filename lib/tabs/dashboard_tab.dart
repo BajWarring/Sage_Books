@@ -2,20 +2,154 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class DashboardTab extends StatelessWidget {
+class DashboardTab extends StatefulWidget {
   final User user;
 
   const DashboardTab({super.key, required this.user});
 
   @override
+  State<DashboardTab> createState() => _DashboardTabState();
+}
+
+class _DashboardTabState extends State<DashboardTab> {
+  
+  // --- ACTION: Open Add Modal ---
+  void _showAddCashbookModal(BuildContext context) {
+    final nameController = TextEditingController();
+    String selectedCurrency = 'USD (\$)';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: EdgeInsets.only(
+          left: 24, 
+          right: 24, 
+          top: 24, 
+          bottom: MediaQuery.of(context).viewInsets.bottom + 40
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 48,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Add Cashbook",
+                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
+                    child: const Icon(PhosphorIcons.x, size: 16, color: Colors.grey),
+                  ),
+                )
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Form: Name
+            Text("Cashbook Name", style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+            const SizedBox(height: 8),
+            TextField(
+              controller: nameController,
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+              decoration: InputDecoration(
+                hintText: "e.g. Office Expenses",
+                hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8)),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF4F46E5))),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Form: Currency
+            Text("Currency", style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: selectedCurrency,
+              items: ['USD (\$)', 'EUR (€)', 'GBP (£)', 'INR (₹)']
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c, style: GoogleFonts.outfit(fontWeight: FontWeight.w500))))
+                  .toList(),
+              onChanged: (v) => selectedCurrency = v!,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Create Button
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  if (nameController.text.isNotEmpty) {
+                    // SAVE TO FIREBASE
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(widget.user.uid)
+                        .collection('cashbooks')
+                        .add({
+                      'name': nameController.text,
+                      'currency': selectedCurrency,
+                      'createdAt': FieldValue.serverTimestamp(),
+                      'balance': 0.0, // Start with 0
+                    });
+                    Navigator.pop(context); // Close Modal
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A), // Slate 900
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                icon: const Icon(PhosphorIcons.check, size: 18, color: Colors.white),
+                label: Text("Create Cashbook", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Helper to get First Name only
-    final String firstName = user.displayName?.split(' ')[0] ?? 'User';
+    final String firstName = widget.user.displayName?.split(' ')[0] ?? 'User';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC), // Slate 50
-      // --- HEADER ---
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -27,7 +161,6 @@ class DashboardTab extends StatelessWidget {
         ),
         title: Row(
           children: [
-            // Profile Pic with Green Dot
             Stack(
               children: [
                 Container(
@@ -36,7 +169,7 @@ class DashboardTab extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     image: DecorationImage(
-                      image: NetworkImage(user.photoURL ?? 'https://i.pravatar.cc/150'),
+                      image: NetworkImage(widget.user.photoURL ?? 'https://i.pravatar.cc/150'),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -48,7 +181,7 @@ class DashboardTab extends StatelessWidget {
                     width: 12,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981), // Emerald 500
+                      color: const Color(0xFF10B981),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
@@ -59,117 +192,114 @@ class DashboardTab extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               "Hi, $firstName",
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF1E293B), // Slate 800
-              ),
+              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
             ),
           ],
         ),
         actions: [
-          _buildHeaderBtn(PhosphorIcons.magnifyingGlass()),
-          _buildHeaderBtn(PhosphorIcons.slidersHorizontal()),
-          _buildHeaderBtn(PhosphorIcons.dotsThreeCircle()),
+          _buildHeaderBtn(PhosphorIcons.magnifyingGlass),
+          _buildHeaderBtn(PhosphorIcons.slidersHorizontal),
+          _buildHeaderBtn(PhosphorIcons.dotsThreeCircle),
           const SizedBox(width: 16),
         ],
       ),
 
-      // --- BODY ---
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        children: [
-          // Section Title
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                "Your Books",
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1E293B),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Text(
-                  "Sorted by Recent",
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF94A3B8), // Slate 400
+      // --- BODY: CONNECTED TO FIREBASE ---
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.user.uid)
+            .collection('cashbooks')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          // 1. Loading State
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+
+          // 2. EMPTY STATE (Big Center Button)
+          if (docs.isEmpty) {
+            return Center(
+              child: GestureDetector(
+                onTap: () => _showAddCashbookModal(context),
+                child: Container(
+                  width: 200,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF), // Blue 50
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(PhosphorIcons.plus, color: Color(0xFF2563EB)),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Add First Cashbook",
+                        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
+            );
+          }
 
-          // --- LIST ITEMS (Replicating HTML Data) ---
+          // 3. LIST STATE (Show List)
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            itemCount: docs.length + 1, // +1 for spacer
+            itemBuilder: (context, index) {
+              if (index == docs.length) return const SizedBox(height: 100); // Spacer
+
+              final data = docs[index].data() as Map<String, dynamic>;
+              return _buildBookCard(
+                title: data['name'] ?? 'Untitled',
+                currency: data['currency'] ?? '\$',
+                balance: (data['balance'] ?? 0.0).toStringAsFixed(2),
+              );
+            },
+          );
+        },
+      ),
+
+      // --- FAB: LOGIC FOR VISIBILITY ---
+      floatingActionButton: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('users').doc(widget.user.uid).collection('cashbooks').snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const SizedBox(); // Hide if empty
           
-          // 1. Personal Wallet (Surplus)
-          _buildBookCard(
-            icon: PhosphorIcons.wallet(PhosphorIconsStyle.duotone),
-            iconColor: const Color(0xFF10B981), // Emerald
-            bgIconColor: const Color(0xFFECFDF5), // Emerald 50
-            title: "Personal Wallet",
-            updated: "Updated 2m ago",
-            amount: "+ \$840.00",
-            tag: "Surplus",
-            tagColor: const Color(0xFF10B981),
-            tagBg: const Color(0xFFECFDF5),
-          ),
-
-          // 2. Bakery Shop (Deficit)
-          _buildBookCard(
-            icon: PhosphorIcons.storefront(PhosphorIconsStyle.duotone),
-            iconColor: const Color(0xFFE11D48), // Rose
-            bgIconColor: const Color(0xFFFFF1F2), // Rose 50
-            title: "Bakery Shop",
-            updated: "Updated 1h ago",
-            amount: "- \$1,250.00",
-            tag: "Deficit",
-            tagColor: const Color(0xFFE11D48),
-            tagBg: const Color(0xFFFFF1F2),
-          ),
-
-          // 3. Travel Fund (Surplus)
-          _buildBookCard(
-            icon: PhosphorIcons.airplane(PhosphorIconsStyle.duotone),
-            iconColor: const Color(0xFF7C3AED), // Violet
-            bgIconColor: const Color(0xFFF5F3FF),
-            title: "Travel Fund",
-            updated: "Updated Yesterday",
-            amount: "+ \$3,400.00",
-            tag: null, // No tag
-            tagColor: Colors.transparent,
-            tagBg: Colors.transparent,
-          ),
-
-           // 4. House Rent (Neutral)
-          _buildBookCard(
-            icon: PhosphorIcons.house(PhosphorIconsStyle.duotone),
-            iconColor: const Color(0xFFEA580C), // Orange
-            bgIconColor: const Color(0xFFFFF7ED),
-            title: "House Rent",
-            updated: "Updated 3d ago",
-            amount: "\$0.00",
-            amountColor: const Color(0xFF334155), // Slate 700
-            tag: null,
-            tagColor: Colors.transparent,
-            tagBg: Colors.transparent,
-          ),
-
-          // Spacer for Bottom Nav
-          const SizedBox(height: 100),
-        ],
+          // SHOW IF DATA EXISTS
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 80), // Push up above nav bar
+            child: SizedBox(
+              width: 56,
+              height: 56,
+              child: FloatingActionButton(
+                onPressed: () => _showAddCashbookModal(context),
+                backgroundColor: const Color(0xFF0F172A),
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: const Icon(PhosphorIcons.plus, color: Colors.white, size: 24),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -181,26 +311,19 @@ class DashboardTab extends StatelessWidget {
       width: 36,
       height: 36,
       margin: const EdgeInsets.only(left: 4),
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        // hover effect isn't needed for mobile touch usually, but structure is here
-      ),
+      decoration: const BoxDecoration(shape: BoxShape.circle),
       child: Icon(icon, color: const Color(0xFF475569), size: 20),
     );
   }
 
-  Widget _buildBookCard({
-    required IconData icon,
-    required Color iconColor,
-    required Color bgIconColor,
-    required String title,
-    required String updated,
-    required String amount,
-    Color? amountColor,
-    String? tag,
-    required Color tagColor,
-    required Color tagBg,
-  }) {
+  Widget _buildBookCard({required String title, required String currency, required String balance}) {
+    // Determine color based on balance (Simple Logic)
+    final double val = double.tryParse(balance) ?? 0;
+    final isPositive = val >= 0;
+    
+    // Extract Symbol
+    String symbol = currency.split(' ')[1].replaceAll(RegExp(r'[()]'), '');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -209,11 +332,7 @@ class DashboardTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            offset: const Offset(0, 2),
-            blurRadius: 4,
-          )
+          BoxShadow(color: Colors.black.withOpacity(0.02), offset: const Offset(0, 2), blurRadius: 4)
         ],
       ),
       child: Row(
@@ -225,10 +344,14 @@ class DashboardTab extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: bgIconColor,
+                  color: isPositive ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: iconColor, size: 20),
+                child: Icon(
+                  PhosphorIcons.notebook, 
+                  color: isPositive ? const Color(0xFF10B981) : const Color(0xFFE11D48), 
+                  size: 20
+                ),
               ),
               const SizedBox(width: 12),
               Column(
@@ -236,55 +359,24 @@ class DashboardTab extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1E293B),
-                    ),
+                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B)),
                   ),
                   Text(
-                    updated,
-                    style: GoogleFonts.outfit(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF94A3B8),
-                    ),
+                    "Just now",
+                    style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF94A3B8)),
                   ),
                 ],
               ),
             ],
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                amount,
-                style: GoogleFonts.outfit(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: amountColor ?? (tag == "Deficit" ? const Color(0xFFE11D48) : const Color(0xFF10B981)),
-                ),
-              ),
-              if (tag != null) ...[
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: tagBg,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    tag,
-                    style: GoogleFonts.outfit(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: tagColor.withOpacity(0.8),
-                    ),
-                  ),
-                )
-              ]
-            ],
-          )
+          Text(
+            "$symbol $balance",
+            style: GoogleFonts.outfit(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: isPositive ? const Color(0xFF10B981) : const Color(0xFFE11D48),
+            ),
+          ),
         ],
       ),
     );
