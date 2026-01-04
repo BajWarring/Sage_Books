@@ -31,14 +31,31 @@ android {
         versionName = flutter.versionName
     }
 
-    buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+  // THIS SIGNING BLOCK
+    signingConfigs {
+        create("release") {
+            // We hardcoded these in the workflow, so we hardcode them here
+            keyAlias = "upload"
+            keyPassword = "sage123"
+            storeFile = file("upload-keystore.jks")
+            storePassword = "sage123"
         }
     }
-}
+
+    // BUILD TYPES TO USE THE KEY
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+        getByName("debug") {
+            // MAGIC TRICK: Use the Release key for Debug too!
+            // This ensures SHA-1 is ALWAYS the same.
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
 
 flutter {
     source = "../.."
