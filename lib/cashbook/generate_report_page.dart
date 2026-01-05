@@ -17,7 +17,7 @@ class GenerateReportPage extends StatefulWidget {
 }
 
 class _GenerateReportPageState extends State<GenerateReportPage> {
-  // State
+  // --- STATE VARIABLES ---
   String _filterDate = "All Time";
   String _filterType = "All";
   String _filterCategory = "All";
@@ -118,7 +118,10 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () { 
+                  Navigator.pop(context); // Close Success Modal
+                  // TODO: Open PDF Preview
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4F46E5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -134,7 +137,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
               height: 48,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  Navigator.pop(context); // Close Modal
+                  Navigator.pop(context); // Close Success
                   Navigator.pop(context); // Go back to Cashbook
                 },
                 style: OutlinedButton.styleFrom(
@@ -155,7 +158,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
   // --- FILTER MODALS ---
 
   void _openFilterModal(String type) {
-    // Reset Date Modal State
+    // Reset Date Modal State when opening
     if (type == 'date') {
       _showDateInputs = false;
       _tempStartDate = null;
@@ -197,7 +200,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
 
-  // --- DATE MODAL (Matches HTML Expansion Logic) ---
+  // --- DATE MODAL (Accordion Style) ---
   Widget _buildDateOptions(StateSetter setModalState) {
     return Column(
       children: [
@@ -206,7 +209,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         _buildModalItem("Last Month", _filterDate == "Last Month", () => _setDate("Last Month")),
         _buildModalItem("Last Year", _filterDate == "Last Year", () => _setDate("Last Year")),
         
-        // Date Range Accordion
+        // Date Range Accordion Trigger
         const SizedBox(height: 8),
         InkWell(
           onTap: () {
@@ -217,18 +220,17 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC), 
+              color: const Color(0xFFF8FAFC), // Slate 50
               borderRadius: BorderRadius.circular(12), 
-              border: Border.all(color: Colors.grey.shade200)
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("Date Range", style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5))),
+                Text("Date Range", style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14, color: const Color(0xFF334155))),
                 Icon(
                   _showDateInputs ? PhosphorIcons.caretUp(PhosphorIconsStyle.bold) : PhosphorIcons.caretDown(PhosphorIconsStyle.bold), 
                   size: 16, 
-                  color: Colors.grey.shade400
+                  color: const Color(0xFF334155)
                 )
               ],
             ),
@@ -238,16 +240,12 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         // Expanded Inputs
         if (_showDateInputs)
           Container(
-            margin: const EdgeInsets.topCenter,
+            margin: const EdgeInsets.only(top: 8),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border(
-                left: BorderSide(color: Colors.grey.shade200),
-                right: BorderSide(color: Colors.grey.shade200),
-                bottom: BorderSide(color: Colors.grey.shade200),
-              ),
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               children: [
@@ -273,7 +271,9 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4F46E5),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(vertical: 12)
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 4,
+                      shadowColor: const Color(0xFFC7D2FE), // Indigo 200 shadow
                     ),
                     child: Text("Apply Range", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
                   ),
@@ -373,7 +373,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
   }
 
   Widget _buildModalItem(String text, bool isSelected, VoidCallback onTap) {
-    return InkWell(onTap: onTap, child: Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16), decoration: BoxDecoration(color: isSelected ? const Color(0xFFEEF2FF) : Colors.transparent, borderRadius: BorderRadius.circular(12)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(text, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF334155))), if (isSelected) Icon(PhosphorIcons.check(PhosphorIconsStyle.bold), color: const Color(0xFF4F46E5), size: 18)])));
+    return InkWell(onTap: onTap, child: Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16), decoration: BoxDecoration(color: isSelected ? const Color(0xFFEEF2FF) : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(text, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF334155))), if (isSelected) Icon(PhosphorIcons.check(PhosphorIconsStyle.bold), color: const Color(0xFF4F46E5), size: 18)])));
   }
 
   @override
@@ -440,30 +440,32 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
                 ),
               ),
 
-              // --- GENERATE BUTTON ---
+              // --- GENERATE BUTTON (MATCHED STYLING) ---
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade100))),
-                child: ElevatedButton.icon(
-                  onPressed: _generateReport,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4F46E5),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 4,
-                    shadowColor: const Color(0xFF4F46E5).withOpacity(0.3),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _generateReport,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5), // Indigo 600
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // Rounded XL
+                      elevation: 8,
+                      shadowColor: const Color(0xFFC7D2FE), // Indigo 200 Shadow
+                    ),
+                    icon: Icon(PhosphorIcons.filePdf(PhosphorIconsStyle.bold), color: Colors.white),
+                    label: Text("Generate PDF Report", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
-                  icon: Icon(PhosphorIcons.filePdf(PhosphorIconsStyle.bold), color: Colors.white),
-                  label: Text("Generate PDF Report", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
             ],
           ),
         ),
 
-        // --- LOADING OVERLAY ---
+        // --- LOADING OVERLAY (WRAPPED IN MATERIAL) ---
         if (_isLoadingReport)
-          // Fixed: Material prevents yellow underline on text
           Material(
             color: Colors.white.withOpacity(0.95),
             child: Center(
