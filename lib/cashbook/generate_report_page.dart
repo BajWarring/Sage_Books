@@ -4,7 +4,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:lottie/lottie.dart'; // Import Lottie
+import 'package:lottie/lottie.dart';
 
 class GenerateReportPage extends StatefulWidget {
   final User user;
@@ -17,20 +17,21 @@ class GenerateReportPage extends StatefulWidget {
 }
 
 class _GenerateReportPageState extends State<GenerateReportPage> {
-  // --- STATE VARIABLES ---
+  // State
   String _filterDate = "All Time";
   String _filterType = "All";
   String _filterCategory = "All";
   String _filterPayment = "All";
   String _filterSort = "Newest";
   String _filterSearch = "None";
-  String _reportType = "all"; // 'all', 'day', 'month', 'category', 'payment'
+  String _reportType = "all"; 
 
-  bool _isLoadingReport = false; // Controls Lottie Overlay
-
-  // Custom Date Range
-  DateTime? _startDate;
-  DateTime? _endDate;
+  bool _isLoadingReport = false;
+  
+  // Custom Date Range (Temp storage for modal)
+  DateTime? _tempStartDate;
+  DateTime? _tempEndDate;
+  bool _showDateInputs = false; // Controls the expansion in Date Modal
 
   // Dynamic Lists
   List<String> _categories = [];
@@ -72,10 +73,10 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
   // --- ACTIONS ---
 
   void _generateReport() async {
-    // 1. Show Loading Overlay
+    // 1. Show Loading (Fixed: Wrapped in Material to avoid yellow text)
     setState(() => _isLoadingReport = true);
 
-    // 2. Simulate Processing (3 Seconds)
+    // 2. Simulate Processing
     await Future.delayed(const Duration(seconds: 3));
 
     // 3. Hide Loading
@@ -100,32 +101,24 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Drag Handle
             Container(width: 48, height: 6, margin: const EdgeInsets.only(bottom: 24), decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(3))),
             
-            // Icon
             Container(
               width: 64, height: 64,
-              decoration: BoxDecoration(color: const Color(0xFFD1FAE5), shape: BoxShape.circle), // Emerald 100
-              child: Icon(PhosphorIcons.checkCircle(PhosphorIconsStyle.fill), color: const Color(0xFF059669), size: 32), // Emerald 600
+              decoration: const BoxDecoration(color: Color(0xFFD1FAE5), shape: BoxShape.circle), // Emerald 100
+              child: Icon(PhosphorIcons.checkCircle(PhosphorIconsStyle.fill), color: const Color(0xFF059669), size: 32),
             ),
             const SizedBox(height: 16),
-            
-            // Text
             Text("Report Ready!", style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
             const SizedBox(height: 4),
             Text("Your PDF has been generated successfully.", style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade500)),
             const SizedBox(height: 32),
 
-            // Buttons
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () { 
-                  Navigator.pop(context); // Close Success
-                  // TODO: Open PDF Preview
-                },
+                onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4F46E5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -141,7 +134,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
               height: 48,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  Navigator.pop(context); // Close Success
+                  Navigator.pop(context); // Close Modal
                   Navigator.pop(context); // Go back to Cashbook
                 },
                 style: OutlinedButton.styleFrom(
@@ -159,33 +152,204 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
 
-  // --- MODALS ---
-  // (Kept _openFilterModal and helper widgets mostly the same, adjusted for context)
+  // --- FILTER MODALS ---
+
   void _openFilterModal(String type) {
+    // Reset Date Modal State
+    if (type == 'date') {
+      _showDateInputs = false;
+      _tempStartDate = null;
+      _tempEndDate = null;
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-        padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(3)))),
-            const SizedBox(height: 24),
-            Text(_getModalTitle(type), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
-            const SizedBox(height: 16),
-            if (type == 'search') _buildSearchInput() else if (type == 'date') _buildDateOptions() else _buildListOptions(type),
-          ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.only(
+            left: 24, right: 24, top: 24, 
+            bottom: MediaQuery.of(context).viewInsets.bottom + 40
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(3)))),
+              const SizedBox(height: 24),
+              Text(_getModalTitle(type), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+              const SizedBox(height: 16),
+              if (type == 'search') 
+                _buildSearchInput()
+              else if (type == 'date')
+                _buildDateOptions(setModalState)
+              else 
+                _buildListOptions(type),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ... (Keep helper methods _getModalTitle, _buildSearchInput, _buildDateOptions, _buildListOptions, _setDate, _buildModalItem from previous response exactly as is) ...
-  // RE-INCLUDED FOR COMPLETENESS:
+  // --- DATE MODAL (Matches HTML Expansion Logic) ---
+  Widget _buildDateOptions(StateSetter setModalState) {
+    return Column(
+      children: [
+        _buildModalItem("All Time", _filterDate == "All Time", () => _setDate("All Time")),
+        _buildModalItem("Last Week", _filterDate == "Last Week", () => _setDate("Last Week")),
+        _buildModalItem("Last Month", _filterDate == "Last Month", () => _setDate("Last Month")),
+        _buildModalItem("Last Year", _filterDate == "Last Year", () => _setDate("Last Year")),
+        
+        // Date Range Accordion
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () {
+            setModalState(() {
+              _showDateInputs = !_showDateInputs;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC), 
+              borderRadius: BorderRadius.circular(12), 
+              border: Border.all(color: Colors.grey.shade200)
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Date Range", style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5))),
+                Icon(
+                  _showDateInputs ? PhosphorIcons.caretUp(PhosphorIconsStyle.bold) : PhosphorIcons.caretDown(PhosphorIconsStyle.bold), 
+                  size: 16, 
+                  color: Colors.grey.shade400
+                )
+              ],
+            ),
+          ),
+        ),
+
+        // Expanded Inputs
+        if (_showDateInputs)
+          Container(
+            margin: const EdgeInsets.topCenter,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                left: BorderSide(color: Colors.grey.shade200),
+                right: BorderSide(color: Colors.grey.shade200),
+                bottom: BorderSide(color: Colors.grey.shade200),
+              ),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _buildDateInput("From", _tempStartDate, (d) => setModalState(() => _tempStartDate = d))),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildDateInput("To", _tempEndDate, (d) => setModalState(() => _tempEndDate = d))),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_tempStartDate != null && _tempEndDate != null) {
+                        setState(() {
+                          _filterDate = "${DateFormat('MMM d').format(_tempStartDate!)} - ${DateFormat('MMM d').format(_tempEndDate!)}";
+                        });
+                        Navigator.pop(context);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 12)
+                    ),
+                    child: Text("Apply Range", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
+                  ),
+                )
+              ],
+            ),
+          )
+      ],
+    );
+  }
+
+  Widget _buildDateInput(String label, DateTime? val, Function(DateTime) onPick) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade400)),
+        const SizedBox(height: 4),
+        InkWell(
+          onTap: () async {
+            final d = await showDatePicker(
+              context: context, 
+              initialDate: val ?? DateTime.now(), 
+              firstDate: DateTime(2020), 
+              lastDate: DateTime(2030),
+              builder: (ctx, child) => Theme(data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF4F46E5))), child: child!)
+            );
+            if (d != null) onPick(d);
+          },
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
+            child: Text(
+              val == null ? "Select" : DateFormat('MMM d, y').format(val),
+              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF334155)),
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+  // --- GENERIC LIST MODAL ---
+  Widget _buildListOptions(String type) {
+    List<String> options = [];
+    String currentVal = "";
+    Function(String) onSelect = (val) {};
+
+    if (type == 'type') {
+      options = ["All", "Cash In", "Cash Out"];
+      currentVal = _filterType;
+      onSelect = (val) => setState(() => _filterType = val);
+    } else if (type == 'category') {
+      options = ["All", ..._categories];
+      currentVal = _filterCategory;
+      onSelect = (val) => setState(() => _filterCategory = val);
+    } else if (type == 'payment') {
+      options = ["All", ..._paymentMethods];
+      currentVal = _filterPayment;
+      onSelect = (val) => setState(() => _filterPayment = val);
+    } else if (type == 'sort') {
+      options = ["Newest", "Oldest"];
+      currentVal = _filterSort;
+      onSelect = (val) => setState(() => _filterSort = val);
+    }
+
+    return Column(
+      children: options.map((opt) => _buildModalItem(opt, currentVal == opt, () {
+        onSelect(opt);
+        Navigator.pop(context);
+      })).toList(),
+    );
+  }
+
+  // --- HELPERS ---
   String _getModalTitle(String type) {
     switch (type) {
       case 'date': return "Select Date Range";
@@ -198,22 +362,15 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     }
   }
 
+  void _setDate(String val) {
+    setState(() => _filterDate = val);
+    Navigator.pop(context);
+  }
+
   Widget _buildSearchInput() {
     final TextEditingController searchCtrl = TextEditingController();
     return Column(children: [TextField(controller: searchCtrl, decoration: InputDecoration(hintText: "Enter keywords...", filled: true, fillColor: const Color(0xFFF8FAFC), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)))), const SizedBox(height: 16), SizedBox(width: double.infinity, height: 48, child: ElevatedButton(onPressed: () { setState(() => _filterSearch = searchCtrl.text.isEmpty ? "None" : searchCtrl.text); Navigator.pop(context); }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: Text("Apply Search", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))))]);
   }
-
-  Widget _buildDateOptions() {
-    return Column(children: [_buildModalItem("All Time", _filterDate == "All Time", () => _setDate("All Time")), _buildModalItem("Last Week", _filterDate == "Last Week", () => _setDate("Last Week")), _buildModalItem("Last Month", _filterDate == "Last Month", () => _setDate("Last Month")), _buildModalItem("Last Year", _filterDate == "Last Year", () => _setDate("Last Year")), const SizedBox(height: 8), InkWell(onTap: () async { Navigator.pop(context); final picked = await showDateRangePicker(context: context, firstDate: DateTime(2020), lastDate: DateTime(2030), builder: (ctx, child) => Theme(data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF4F46E5))), child: child!)); if (picked != null) { setState(() { _startDate = picked.start; _endDate = picked.end; _filterDate = "${DateFormat('MMM d').format(picked.start)} - ${DateFormat('MMM d').format(picked.end)}"; }); } }, child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Date Range (From - To)", style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: const Color(0xFF4F46E5))), Icon(PhosphorIcons.caretRight(PhosphorIconsStyle.bold), size: 16, color: Colors.grey.shade400)])))]);
-  }
-
-  Widget _buildListOptions(String type) {
-    List<String> options = []; String currentVal = ""; Function(String) onSelect = (val) {};
-    if (type == 'type') { options = ["All", "Cash In", "Cash Out"]; currentVal = _filterType; onSelect = (val) => setState(() => _filterType = val); } else if (type == 'category') { options = ["All", ..._categories]; currentVal = _filterCategory; onSelect = (val) => setState(() => _filterCategory = val); } else if (type == 'payment') { options = ["All", ..._paymentMethods]; currentVal = _filterPayment; onSelect = (val) => setState(() => _filterPayment = val); } else if (type == 'sort') { options = ["Newest", "Oldest"]; currentVal = _filterSort; onSelect = (val) => setState(() => _filterSort = val); }
-    return Column(children: options.map((opt) => _buildModalItem(opt, currentVal == opt, () { onSelect(opt); Navigator.pop(context); })).toList());
-  }
-
-  void _setDate(String val) { setState(() { _filterDate = val; _startDate = null; _endDate = null; }); Navigator.pop(context); }
 
   Widget _buildModalItem(String text, bool isSelected, VoidCallback onTap) {
     return InkWell(onTap: onTap, child: Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16), decoration: BoxDecoration(color: isSelected ? const Color(0xFFEEF2FF) : Colors.transparent, borderRadius: BorderRadius.circular(12)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(text, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF334155))), if (isSelected) Icon(PhosphorIcons.check(PhosphorIconsStyle.bold), color: const Color(0xFF4F46E5), size: 18)])));
@@ -306,15 +463,14 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
 
         // --- LOADING OVERLAY ---
         if (_isLoadingReport)
-          Container(
+          // Fixed: Material prevents yellow underline on text
+          Material(
             color: Colors.white.withOpacity(0.95),
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // LOTTIE ANIMATION
                   Lottie.asset('assets/animations/paperscan.json', width: 250, height: 250),
-                  // Text
                   Text("Processing Data...", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5))),
                   const SizedBox(height: 4),
                   Text("Please wait a moment", style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade400)),
@@ -331,12 +487,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 2)],
-        ),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 2)]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -358,7 +509,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFF8FAFC) : Colors.white, // Subtle tint when selected
+          color: isSelected ? const Color(0xFFF8FAFC) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: isSelected ? const Color(0xFF4F46E5) : Colors.grey.shade200, width: isSelected ? 2 : 1),
           boxShadow: [if (isSelected) BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4)) else BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)]
