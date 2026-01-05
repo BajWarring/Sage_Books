@@ -31,7 +31,6 @@ class _DashboardTabState extends State<DashboardTab> {
 
   Widget _buildSortItem(String text, IconData icon) { return Row(children: [Icon(icon, size: 18, color: const Color(0xFF64748B)), const SizedBox(width: 12), Text(text, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E293B)))]); }
 
-  // --- CHANGED TO DIALOG (MIDDLE POPUP) ---
   void _showAddCashbookModal(BuildContext context) {
     final nameController = TextEditingController();
     String selectedCurrency = '🇺🇸 USD (\$)';
@@ -70,7 +69,6 @@ class _DashboardTabState extends State<DashboardTab> {
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: selectedCurrency,
-                // ADDED FLAGS AS "LOGOS"
                 items: ['🇺🇸 USD (\$)','🇪🇺 EUR (€)','🇬🇧 GBP (£)','🇮🇳 INR (₹)']
                     .map((c) => DropdownMenuItem(value: c, child: Text(c, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)))).toList(),
                 onChanged: (v) => selectedCurrency = v!,
@@ -188,7 +186,6 @@ class _DashboardTabState extends State<DashboardTab> {
 
   Widget _buildBookCard(BuildContext context, String docId, Map<String, dynamic> data) {
     final balance = (data['balance'] ?? 0.0).toStringAsFixed(2);
-    // SAFELY EXTRACT SYMBOL (Split by space or take first char)
     String rawCurr = data['currency'] ?? '\$';
     String currency = rawCurr.contains('(') ? rawCurr.split('(')[1].replaceAll(')', '') : rawCurr.split(' ').last;
     
