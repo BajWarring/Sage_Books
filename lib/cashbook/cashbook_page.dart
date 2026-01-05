@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:sage_books/cashbook/entry_form.dart';
 import 'package:sage_books/cashbook/entry_details.dart';
+import 'package:sage_books/cashbook/generate_report_page.dart'; // IMPORT THIS
 
 class CashbookPage extends StatefulWidget {
   final User user;
@@ -39,7 +40,6 @@ class _CashbookPageState extends State<CashbookPage> {
               ListTile(
                 title: Text("From Date", style: GoogleFonts.outfit(color: Colors.grey)),
                 subtitle: Text(_startDate == null ? "Select Date" : DateFormat('MMM d, y').format(_startDate!), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black)),
-                // FIX: Added (PhosphorIconsStyle.bold) and removed const
                 leading: Icon(PhosphorIcons.calendar(PhosphorIconsStyle.bold)),
                 onTap: () async {
                   final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
@@ -49,7 +49,6 @@ class _CashbookPageState extends State<CashbookPage> {
               ListTile(
                 title: Text("To Date", style: GoogleFonts.outfit(color: Colors.grey)),
                 subtitle: Text(_endDate == null ? "Select Date" : DateFormat('MMM d, y').format(_endDate!), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black)),
-                // FIX: Added (PhosphorIconsStyle.bold) and removed const
                 leading: Icon(PhosphorIcons.calendar(PhosphorIconsStyle.bold)),
                 onTap: () async {
                   final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
@@ -110,7 +109,6 @@ class _CashbookPageState extends State<CashbookPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // FILTER BUTTON
                 InkWell(
                   onTap: _showDateFilterDialog,
                   child: Container(
@@ -129,10 +127,8 @@ class _CashbookPageState extends State<CashbookPage> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
                 
-                // 1. Get All Docs
                 var docs = snapshot.data?.docs ?? [];
                 
-                // 2. Filter (Text + Date)
                 if (_searchText.isNotEmpty || _startDate != null) {
                   docs = docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
@@ -146,7 +142,6 @@ class _CashbookPageState extends State<CashbookPage> {
                   }).toList();
                 }
 
-                // 3. Calculate Running Balance
                 List<QueryDocumentSnapshot> sortedAsc = List.from(docs);
                 sortedAsc.sort((a, b) => (a.data() as Map)['date'].compareTo((b.data() as Map)['date']));
                 
@@ -168,7 +163,6 @@ class _CashbookPageState extends State<CashbookPage> {
                   runningBalances[doc.id] = tempBalance;
                 }
                 
-                // 4. Group (using original DESC list)
                 Map<String, List<QueryDocumentSnapshot>> grouped = {};
                 for (var doc in docs) {
                   String key = _formatDate((doc.data() as Map)['date'].toDate());
@@ -182,7 +176,27 @@ class _CashbookPageState extends State<CashbookPage> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade100), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 4))]),
-                      child: Column(children: [Text("NET BALANCE", style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)), Text("$symbol ${tempBalance.toStringAsFixed(2)}", style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: const Color(0xFF4F46E5))), const SizedBox(height: 16), Row(children: [Expanded(child: _buildSummaryBox("TOTAL IN", "$symbol ${totalIn.toStringAsFixed(0)}", const Color(0xFFECFDF5), const Color(0xFF10B981))), const SizedBox(width: 12), Expanded(child: _buildSummaryBox("TOTAL OUT", "$symbol ${totalOut.toStringAsFixed(0)}", const Color(0xFFFFF1F2), const Color(0xFFE11D48)))]), const SizedBox(height: 16), InkWell(onTap: (){}, child: Container(height: 40, width: double.infinity, decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE0E7FF))), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(PhosphorIcons.filePdf(PhosphorIconsStyle.bold), size: 18, color: const Color(0xFF4338CA)), const SizedBox(width: 8), Text("Generate Report", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF4338CA)))])))]),
+                      child: Column(children: [
+                        Text("NET BALANCE", style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
+                        Text("$symbol ${tempBalance.toStringAsFixed(2)}", style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: const Color(0xFF4F46E5))),
+                        const SizedBox(height: 16),
+                        Row(children: [Expanded(child: _buildSummaryBox("TOTAL IN", "$symbol ${totalIn.toStringAsFixed(0)}", const Color(0xFFECFDF5), const Color(0xFF10B981))), const SizedBox(width: 12), Expanded(child: _buildSummaryBox("TOTAL OUT", "$symbol ${totalOut.toStringAsFixed(0)}", const Color(0xFFFFF1F2), const Color(0xFFE11D48)))]),
+                        const SizedBox(height: 16),
+                        
+                        // --- GENERATE REPORT BUTTON ---
+                        InkWell(
+                          onTap: (){
+                            // Navigate to Report Page
+                            Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => GenerateReportPage(user: widget.user, cashbookId: widget.cashbookId)
+                            ));
+                          },
+                          child: Container(
+                            height: 40, width: double.infinity,
+                            decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE0E7FF))),
+                            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(PhosphorIcons.filePdf(PhosphorIconsStyle.bold), size: 18, color: const Color(0xFF4338CA)), const SizedBox(width: 8), Text("Generate Report", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF4338CA)))]))
+                        )
+                      ]),
                     ),
                     const SizedBox(height: 24),
                     ...grouped.entries.map((entry) {
