@@ -39,7 +39,8 @@ class _CashbookPageState extends State<CashbookPage> {
               ListTile(
                 title: Text("From Date", style: GoogleFonts.outfit(color: Colors.grey)),
                 subtitle: Text(_startDate == null ? "Select Date" : DateFormat('MMM d, y').format(_startDate!), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black)),
-                leading: const Icon(PhosphorIcons.calendar),
+                // FIX: Added (PhosphorIconsStyle.bold) and removed const
+                leading: Icon(PhosphorIcons.calendar(PhosphorIconsStyle.bold)),
                 onTap: () async {
                   final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
                   if (d != null) { setState(() => _startDate = d); Navigator.pop(context); _showDateFilterDialog(); }
@@ -48,7 +49,8 @@ class _CashbookPageState extends State<CashbookPage> {
               ListTile(
                 title: Text("To Date", style: GoogleFonts.outfit(color: Colors.grey)),
                 subtitle: Text(_endDate == null ? "Select Date" : DateFormat('MMM d, y').format(_endDate!), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black)),
-                leading: const Icon(PhosphorIcons.calendar),
+                // FIX: Added (PhosphorIconsStyle.bold) and removed const
+                leading: Icon(PhosphorIcons.calendar(PhosphorIconsStyle.bold)),
                 onTap: () async {
                   final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
                   if (d != null) { setState(() => _endDate = d); Navigator.pop(context); _showDateFilterDialog(); }
@@ -145,7 +147,6 @@ class _CashbookPageState extends State<CashbookPage> {
                 }
 
                 // 3. Calculate Running Balance
-                // We must sort ASCENDING to calc balance over time
                 List<QueryDocumentSnapshot> sortedAsc = List.from(docs);
                 sortedAsc.sort((a, b) => (a.data() as Map)['date'].compareTo((b.data() as Map)['date']));
                 
@@ -202,7 +203,6 @@ class _CashbookPageState extends State<CashbookPage> {
                                   ]),
                                   Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                                      Text("${data['type'] == 'in' ? '+' : '-'} $symbol ${(data['amount'] ?? 0).toStringAsFixed(2)}", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: data['type'] == 'in' ? const Color(0xFF10B981) : const Color(0xFFE11D48))),
-                                     // RUNNING BALANCE VISIBLE HERE
                                      Text("Bal: $symbol${rBal.toStringAsFixed(2)}", style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade400)),
                                   ]),
                                 ]),
