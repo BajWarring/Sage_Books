@@ -6,19 +6,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
-import 'package:open_file/open_file.dart'; // Add this
-import 'package:sage_books/cashbook/pdf_generator.dart'; // Import Generator
+import 'package:open_file/open_file.dart'; 
+import 'package:sage_books/cashbook/pdf_generator.dart'; 
 
 class GenerateReportPage extends StatefulWidget {
   final User user;
   final String cashbookId;
-  final String cashbookName; // Pass name for PDF title
+  final String cashbookName;
 
   const GenerateReportPage({
     super.key, 
     required this.user, 
     required this.cashbookId,
-    this.cashbookName = "Cashbook", // Default
+    this.cashbookName = "Cashbook", 
   });
 
   @override
@@ -36,7 +36,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
   String _reportType = "all"; 
 
   bool _isLoadingReport = false;
-  File? _generatedPdfFile; // Store generated file
+  File? _generatedPdfFile;
   
   // Date Range
   DateTime? _startDate;
@@ -78,7 +78,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     setState(() => _isLoadingReport = true);
 
     try {
-      // 1. FETCH DATA FROM FIREBASE (Respecting Filters)
+      // 1. FETCH DATA
       Query query = FirebaseFirestore.instance.collection('users')
           .doc(widget.user.uid)
           .collection('cashbooks')
@@ -95,7 +95,6 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
       if (_filterDate == "Last Year") start = DateTime(now.year - 1, now.month, now.day);
       if (_startDate != null) { start = _startDate!; end = _endDate!; }
 
-      // We filter Date, Type, Category, Payment manually after fetch for simplicity with Firestore indexes
       final snapshot = await query.orderBy('date', descending: _filterSort == 'Newest').get();
       
       List<Map<String, dynamic>> finalEntries = [];
@@ -103,9 +102,9 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
       for (var doc in snapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         DateTime date = (data['date'] as Timestamp).toDate();
-        data['date'] = date; // Convert to DateTime object for Generator
+        data['date'] = date; 
 
-        // APPLY FILTERS
+        // Apply Filters
         if (date.isBefore(start) || date.isAfter(end)) continue;
         if (_filterType != "All") {
            String type = _filterType == "Cash In" ? 'in' : 'out';
@@ -128,8 +127,6 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         cashbookName: widget.cashbookName,
         entries: finalEntries,
         reportType: _reportType,
-        startDate: start,
-        endDate: end,
         filters: {
           'Type': _filterType,
           'Category': _filterCategory,
@@ -140,7 +137,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
 
       _generatedPdfFile = file;
 
-      // 3. Fake Delay for "Processing" UX
+      // 3. Fake Delay
       await Future.delayed(const Duration(seconds: 2)); 
 
       if (mounted) setState(() => _isLoadingReport = false);
@@ -171,8 +168,6 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
             const SizedBox(height: 4),
             Text("Your PDF has been generated successfully.", style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade500)),
             const SizedBox(height: 32),
-
-            // PREVIEW BUTTON
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -186,8 +181,6 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
               ),
             ),
             const SizedBox(height: 12),
-            
-            // DOWNLOAD BUTTON
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -195,7 +188,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
                 onPressed: () async {
                   if (_generatedPdfFile != null) {
                     await PdfGenerator.saveToDownloads(_generatedPdfFile!, widget.cashbookName);
-                    Navigator.pop(context); // Close modal
+                    Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("PDF saved to Downloads folder!")));
                   }
                 },
@@ -210,8 +203,114 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
 
-  // --- FILTER MODALS & UI ---
-  // (Helper methods for filter modals kept same as before, simplified for brevity here)
+  // --- ANIMATED GRID LAYOUT ---
+  Widget _buildAnimatedGrid() {
+    // Determine if we should be in 2-column mode (hiding Type and Sort)
+    bool isHidden = _reportType == 'category' || _reportType == 'payment';
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double maxWidth = constraints.maxWidth;
+        double gap = 12.0;
+
+        // 3-Column Params
+        double w3 = (maxWidth - 2 * gap) / 3;
+        double h3 = w3 / 1.4;
+
+        // 2-Column Params (Items are larger)
+        double w2 = (maxWidth - gap) / 2;
+        double h2 = w2 / 1.4;
+
+        // Current Dimensions based on state
+        double itemW = isHidden ? w2 : w3;
+        double itemH = isHidden ? h2 : h3;
+        double totalH = 2 * itemH + gap; // Stack height expands/contracts
+
+        // Helper to position items with animation
+        Widget animItem({
+          required int keyVal,
+          required double left,
+          required double top,
+          required double width,
+          required double height,
+          required double opacity,
+          required Widget child,
+        }) {
+          return AnimatedPositioned(
+            key: ValueKey(keyVal),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOutCubic, // Fluid motion
+            left: left,
+            top: top,
+            width: width,
+            height: height,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: opacity,
+              child: SingleChildScrollView(
+                 physics: const NeverScrollableScrollPhysics(),
+                 child: SizedBox(height: height, child: child),
+              ), // Prevents overflow errors during shrink
+            ),
+          );
+        }
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOutCubic,
+          height: totalH,
+          child: Stack(
+            children: [
+              // 0: Date (Always Row 1, Col 1)
+              animItem(keyVal: 0, left: 0, top: 0, width: itemW, height: itemH, opacity: 1, 
+                child: _buildFilterBtn("Date", _filterDate, () => _openFilterModal('date'))),
+
+              // 1: Type (Middle Top -> Disappears)
+              animItem(keyVal: 1, 
+                left: isHidden ? w2 / 2 : w3 + gap, // Moves to center while shrinking
+                top: isHidden ? h2 / 2 : 0, 
+                width: isHidden ? 0 : w3, 
+                height: isHidden ? 0 : h3, 
+                opacity: isHidden ? 0 : 1, 
+                child: _buildFilterBtn("Type", _filterType, () => _openFilterModal('type'))),
+
+              // 2: Category (Right Top -> Slides to Row 1, Col 2)
+              animItem(keyVal: 2, 
+                left: isHidden ? w2 + gap : 2 * (w3 + gap), 
+                top: 0, 
+                width: itemW, height: itemH, opacity: 1, 
+                child: _buildFilterBtn("Category", _filterCategory, () => _openFilterModal('category'))),
+
+              // 3: Payment (Left Bottom -> Stays Left Bottom, grows)
+              animItem(keyVal: 3, 
+                left: 0, 
+                top: isHidden ? h2 + gap : h3 + gap, 
+                width: itemW, height: itemH, opacity: 1, 
+                child: _buildFilterBtn("Payment", _filterPayment, () => _openFilterModal('payment'))),
+
+              // 4: Sort (Middle Bottom -> Disappears)
+              animItem(keyVal: 4, 
+                left: isHidden ? w2 / 2 : w3 + gap, 
+                top: isHidden ? h2 + gap + h2 / 2 : h3 + gap, 
+                width: isHidden ? 0 : w3, 
+                height: isHidden ? 0 : h3, 
+                opacity: isHidden ? 0 : 1, 
+                child: _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort'))),
+
+              // 5: Search (Right Bottom -> Slides to Row 2, Col 2)
+              animItem(keyVal: 5, 
+                left: isHidden ? w2 + gap : 2 * (w3 + gap), 
+                top: isHidden ? h2 + gap : h3 + gap, 
+                width: itemW, height: itemH, opacity: 1, 
+                child: _buildFilterBtn("Search", _filterSearch, () => _openFilterModal('search'))),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- FILTER MODALS & HELPERS ---
   void _openFilterModal(String type) {
     if (type == 'date') { _showDateInputs = false; _tempStartDate = null; _tempEndDate = null; }
     showModalBottomSheet(context: context, backgroundColor: Colors.transparent, isScrollControlled: true, builder: (context) => StatefulBuilder(builder: (context, setModalState) => Container(decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))), padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 40), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(3)))), const SizedBox(height: 24), Text(_getModalTitle(type), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))), const SizedBox(height: 16), if (type == 'search') _buildSearchInput() else if (type == 'date') _buildDateOptions(setModalState) else _buildListOptions(type)]))));
@@ -235,9 +334,6 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
 
   @override
   Widget build(BuildContext context) {
-    // DISABLE LOGIC: If Category or Payment report selected, disable Type/Sort
-    bool disableTypeSort = (_reportType == 'category' || _reportType == 'payment');
-
     return Stack(
       children: [
         Scaffold(
@@ -253,17 +349,10 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
                     children: [
                       Text("FILTERS", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
                       const SizedBox(height: 12),
-                      GridView.count(
-                        crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.4, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-                        children: [
-                          _buildFilterBtn("Date", _filterDate, () => _openFilterModal('date')),
-                          _buildFilterBtn("Type", _filterType, () => _openFilterModal('type'), isDisabled: disableTypeSort),
-                          _buildFilterBtn("Category", _filterCategory, () => _openFilterModal('category')),
-                          _buildFilterBtn("Payment", _filterPayment, () => _openFilterModal('payment')),
-                          _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort'), isDisabled: disableTypeSort),
-                          _buildFilterBtn("Search", _filterSearch, () => _openFilterModal('search')),
-                        ],
-                      ),
+                      
+                      // ANIMATED GRID REPLACED HERE
+                      _buildAnimatedGrid(),
+                      
                       const SizedBox(height: 32),
                       Text("REPORT FORMAT", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
                       const SizedBox(height: 12),
@@ -290,24 +379,24 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
 
-  Widget _buildFilterBtn(String label, String value, VoidCallback onTap, {bool isDisabled = false}) {
+  Widget _buildFilterBtn(String label, String value, VoidCallback onTap) {
     return GestureDetector(
-      onTap: isDisabled ? null : onTap,
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isDisabled ? Colors.grey.shade50 : Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [if (!isDisabled) BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 2)],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 2)],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(label.toUpperCase(), style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: isDisabled ? Colors.grey.shade300 : Colors.grey.shade400), maxLines: 1),
+            Text(label.toUpperCase(), style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade400), maxLines: 1),
             const SizedBox(height: 4),
-            Text(value, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: isDisabled ? Colors.grey.shade400 : const Color(0xFF4F46E5)), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(value, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5)), maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
