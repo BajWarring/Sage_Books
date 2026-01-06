@@ -47,6 +47,13 @@ dependencies:
   flutter_svg: ^2.0.0      # For Google Logo
   glassmorphism_ui: ^0.3.0 # Optional helper, but we'll do manual for exact control
 
+  # PDF Report Generation 
+  pdf: ^3.10.0
+  printing: ^5.11.0
+  path_provider: ^2.1.1
+  open_file: ^3.3.2
+  permission_handler: ^11.0.0 # For saving to downloads
+
   # Other Packages
   intl: ^0.19.0
 
