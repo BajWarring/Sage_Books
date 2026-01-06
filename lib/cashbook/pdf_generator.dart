@@ -16,6 +16,11 @@ class PdfGenerator {
   static const PdfColor greenColor = PdfColor.fromInt(0xFF059669);  // Emerald 600
   static const PdfColor redColor = PdfColor.fromInt(0xFFE11D48);    // Rose 600
 
+  // --- HELPER: Fix for .withOpacity() ---
+  static PdfColor _withOpacity(PdfColor color, double opacity) {
+    return PdfColor(color.red, color.green, color.blue, opacity);
+  }
+
   static Future<File> generateReport({
     required String cashbookName,
     required List<Map<String, dynamic>> entries,
@@ -30,7 +35,7 @@ class PdfGenerator {
     double totalIn = 0;
     double totalOut = 0;
     
-    // Sort entries by date (Oldest first) for correct range display
+    // Sort entries by date (Oldest first)
     entries.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
 
     for (var e in entries) {
@@ -134,9 +139,10 @@ class PdfGenerator {
       child: pw.Container(
         padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: pw.BoxDecoration(
-          color: color.withOpacity(0.05),
+          // FIXED: Use helper instead of .withOpacity
+          color: _withOpacity(color, 0.05),
           borderRadius: pw.BorderRadius.circular(6),
-          border: pw.Border.all(color: color.withOpacity(0.2)),
+          border: pw.Border.all(color: _withOpacity(color, 0.2)),
         ),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -182,11 +188,6 @@ class PdfGenerator {
 
   // --- TABLE: ALL ENTRIES ---
   static pw.Widget _buildAllEntriesTable(List<Map<String, dynamic>> entries, pw.Font fontBold, double totalIn, double totalOut) {
-    // Reverse for display (Newest First) if preferred, but usually reports are chronological. 
-    // Let's stick to the sort order passed (which we sorted ASC for date range). 
-    // To match "Newest" filter preference, we might need to reverse here.
-    // However, chronological (Old -> New) is standard for ledgers. We will keep Old -> New.
-
     final headerStyle = pw.TextStyle(font: fontBold, color: PdfColors.white, fontSize: 9);
     
     return pw.TableHelper.fromTextArray(
@@ -195,7 +196,8 @@ class PdfGenerator {
       headerDecoration: const pw.BoxDecoration(color: primaryColor),
       cellStyle: const pw.TextStyle(fontSize: 9, color: textColor),
       cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      border: pw.TableBorder.all(color: greyColor.withOpacity(0.2), width: 0.5),
+      // FIXED: Use helper
+      border: pw.TableBorder.all(color: _withOpacity(greyColor, 0.2), width: 0.5),
       rowDecoration: const pw.BoxDecoration(color: PdfColors.white),
       oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
       data: [
@@ -214,8 +216,7 @@ class PdfGenerator {
         // FOOTER ROW
         ['TOTAL', '', '', '', totalIn.toStringAsFixed(2), totalOut.toStringAsFixed(2)]
       ],
-      // Style the last row (Footer)
-      rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: greyColor))),
+      // FIXED: Removed duplicated rowDecoration argument
     );
   }
 
@@ -283,7 +284,8 @@ class PdfGenerator {
       headerDecoration: const pw.BoxDecoration(color: primaryColor),
       cellStyle: const pw.TextStyle(fontSize: 9, color: textColor),
       cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      border: pw.TableBorder.all(color: greyColor.withOpacity(0.2), width: 0.5),
+      // FIXED: Use helper
+      border: pw.TableBorder.all(color: _withOpacity(greyColor, 0.2), width: 0.5),
       oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
       data: tableData,
     );
@@ -301,8 +303,7 @@ class PdfGenerator {
   
   static Future<void> saveToDownloads(File tempFile, String cashbookName) async {
     if (!await Permission.storage.request().isGranted) {
-        // Android 11+ might return denied but still allow access to public media directories
-        // Keep checking logic for older androids
+        // Continue anyway; older Androids might fail but scoped storage on new ones works via other paths
     }
 
     Directory? downloadsDir;
@@ -316,7 +317,6 @@ class PdfGenerator {
       if (!await downloadsDir.exists()) await downloadsDir.create(recursive: true);
       
       final now = DateTime.now();
-      // Format: CashbookName_dd_MM_yyyy.pdf
       final fileName = "${cashbookName.replaceAll(' ', '_')}_${DateFormat('dd_MM_yyyy').format(now)}.pdf";
       final newFile = File("${downloadsDir.path}/$fileName");
       await tempFile.copy(newFile.path);
