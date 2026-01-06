@@ -9,7 +9,6 @@ import 'package:permission_handler/permission_handler.dart';
 class PdfGenerator {
   // --- COLORS ---
   static const PdfColor primaryColor = PdfColor.fromInt(0xFF4F46E5); 
-  static const PdfColor primaryLight = PdfColor.fromInt(0xFFEEF2FF); 
   static const PdfColor greenColor = PdfColor.fromInt(0xFF059669);   
   static const PdfColor greenLight = PdfColor.fromInt(0xFFECFDF5);   
   static const PdfColor redColor = PdfColor.fromInt(0xFFE11D48);     
@@ -91,7 +90,7 @@ class PdfGenerator {
     return _savePdfFile(cashbookName, pdf);
   }
 
-  // --- COMPONENT: HEADER ---
+  // --- HEADER ---
   static pw.Widget _buildHeader(String name, String dateRange, pw.Font fontBold) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -100,6 +99,7 @@ class PdfGenerator {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
+            // Using the passed name variable directly
             pw.Text(name, style: pw.TextStyle(font: fontBold, fontSize: 22, color: primaryColor)),
             pw.SizedBox(height: 4),
             pw.Text("OFFICIAL REPORT", style: pw.TextStyle(font: fontBold, fontSize: 9, color: greyColor, letterSpacing: 1.5)),
@@ -116,7 +116,7 @@ class PdfGenerator {
     );
   }
 
-  // --- COMPONENT: SUMMARY CARDS ---
+  // --- SUMMARY CARDS ---
   static pw.Widget _buildSummaryCards(double totalIn, double totalOut, double net, pw.Font fontBold) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -125,7 +125,7 @@ class PdfGenerator {
         pw.SizedBox(width: 10),
         _buildCard("Total Cash Out", totalOut, redColor, redLight, fontBold),
         pw.SizedBox(width: 10),
-        _buildCard("Net Balance", net, primaryColor, primaryLight, fontBold, isNet: true),
+        _buildCard("Net Balance", net, primaryColor, PdfColor.fromInt(0xFFEEF2FF), fontBold, isNet: true),
       ],
     );
   }
@@ -155,7 +155,7 @@ class PdfGenerator {
     );
   }
 
-  // --- COMPONENT: FILTERS ---
+  // --- ACTIVE FILTERS ---
   static pw.Widget _buildActiveFilters(Map<String, String> filters, pw.Font fontBold) {
     return pw.Container(
       width: double.infinity,
@@ -182,72 +182,93 @@ class PdfGenerator {
   static pw.Widget _buildAllEntriesTable(List<Map<String, dynamic>> entries, pw.Font fontBold, double totalIn, double totalOut, double netBalance) {
     double runningBal = 0;
     
-    // Prepare data
     final data = <List<dynamic>>[];
     for (var e in entries) {
-      final date = e['date'] as DateTime;
       final isInc = e['type'] == 'in';
       final amt = (e['amount'] as num).toDouble();
       if (isInc) runningBal += amt; else runningBal -= amt;
-
-      // Add data to be processed by cell builder
       data.add([e, isInc, amt, runningBal]); 
     }
-
-    // Add Footer Data Marker
-    data.add([null, false, 0.0, 0.0]); 
+    // Footer Marker
+    data.add([null]); 
 
     return pw.TableHelper.fromTextArray(
-      headers: ['DATE', 'REMARKS', 'CATEGORY', 'MODE', 'IN (+)', 'OUT (-)', 'BALANCE'],
+      headers: ['DATE', 'REMARKS', 'CATEGORY', 'MODE', 'IN (+)', 'OUT (-)', 'BAL'],
+      // COLUMN WIDTHS: Critical fix for text wrapping
+      columnWidths: {
+        0: const pw.FixedColumnWidth(55), // Date
+        1: const pw.FlexColumnWidth(3),   // Remarks (Takes most space)
+        2: const pw.FixedColumnWidth(55), // Category
+        3: const pw.FixedColumnWidth(45), // Mode
+        4: const pw.FixedColumnWidth(50), // In
+        5: const pw.FixedColumnWidth(50), // Out
+        6: const pw.FixedColumnWidth(55), // Balance
+      },
       headerStyle: pw.TextStyle(font: fontBold, color: white, fontSize: 9),
       headerDecoration: const pw.BoxDecoration(color: primaryColor),
       headerAlignment: pw.Alignment.center,
-      cellPadding: const pw.EdgeInsets.all(6), // Replaced headerCellPadding with cellPadding
+      cellPadding: const pw.EdgeInsets.all(0), // Set to 0 to allow footer container to fill cell
       border: pw.TableBorder.all(color: greyColor, width: 0.5),
-      oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
       cellAlignment: pw.Alignment.center,
       data: data.asMap().entries.map((entry) {
-        final index = entry.key;
         final row = entry.value;
 
-        // FOOTER ROW
+        // --- FOOTER ROW ---
         if (row[0] == null) {
+          // Wrap content in a Colored Container to simulate Row Background
+          pw.Widget footerCell(String text) {
+             return pw.Container(
+               color: primaryColor, // FOOTER COLOR FIX
+               padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+               alignment: pw.Alignment.center,
+               child: pw.Text(text, style: pw.TextStyle(font: fontBold, color: white, fontSize: 8))
+             );
+          }
+          
           return [
-            'TOTAL', '', '', '', 
-            totalIn.toStringAsFixed(2), 
-            totalOut.toStringAsFixed(2), 
-            netBalance.toStringAsFixed(2)
+            footerCell('TOTAL'),
+            footerCell(''),
+            footerCell(''),
+            footerCell(''),
+            footerCell(totalIn.toStringAsFixed(2)),
+            footerCell(totalOut.toStringAsFixed(2)),
+            footerCell(netBalance.toStringAsFixed(2)),
           ];
         }
 
-        // NORMAL ROWS
+        // --- NORMAL ROW ---
         final e = row[0] as Map<String, dynamic>;
         final isInc = row[1] as bool;
         final amt = row[2] as double;
         final bal = row[3] as double;
         final date = e['date'] as DateTime;
+        final bgColor = entry.key % 2 == 1 ? lightGrey : white;
+
+        pw.Widget cell(pw.Widget child) {
+          return pw.Container(
+            color: bgColor,
+            padding: const pw.EdgeInsets.all(5),
+            alignment: pw.Alignment.center,
+            child: child
+          );
+        }
 
         return [
-          // Date with Time
-          pw.Column(
+          cell(pw.Column(
             mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
-              pw.Text(DateFormat('dd/MM/yy').format(date), style: const pw.TextStyle(fontSize: 9, color: textColor)),
-              pw.Text(DateFormat('h:mm a').format(date), style: const pw.TextStyle(fontSize: 7, color: greyColor)),
+              pw.Text(DateFormat('dd/MM/yy').format(date), style: const pw.TextStyle(fontSize: 8, color: textColor)),
+              pw.Text(DateFormat('h:mm a').format(date), style: const pw.TextStyle(fontSize: 6, color: greyColor)),
             ]
-          ),
-          e['remarks'],
-          e['category'] ?? '-',
-          e['paymentMethod'] ?? '-',
-          // Green Text for In
-          pw.Text(isInc ? amt.toStringAsFixed(2) : "", style: pw.TextStyle(fontSize: 9, color: greenColor, font: fontBold)),
-          // Red Text for Out
-          pw.Text(!isInc ? amt.toStringAsFixed(2) : "", style: pw.TextStyle(fontSize: 9, color: redColor, font: fontBold)),
-          bal.toStringAsFixed(2),
+          )),
+          cell(pw.Text(e['remarks'], textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 9, color: textColor))),
+          cell(pw.Text(e['category'] ?? '-', style: const pw.TextStyle(fontSize: 8, color: textColor))),
+          cell(pw.Text(e['paymentMethod'] ?? '-', style: const pw.TextStyle(fontSize: 8, color: textColor))),
+          cell(pw.Text(isInc ? amt.toStringAsFixed(2) : "", style: pw.TextStyle(fontSize: 9, color: greenColor, font: fontBold))),
+          cell(pw.Text(!isInc ? amt.toStringAsFixed(2) : "", style: pw.TextStyle(fontSize: 9, color: redColor, font: fontBold))),
+          cell(pw.Text(bal.toStringAsFixed(2), style: const pw.TextStyle(fontSize: 8, color: textColor))),
         ];
       }).toList(),
-      // Custom Row Styling for Footer
-      rowDecoration: const pw.BoxDecoration(color: white),
     );
   }
 
@@ -289,28 +310,43 @@ class PdfGenerator {
       headerStyle: pw.TextStyle(font: fontBold, color: white, fontSize: 9),
       headerDecoration: const pw.BoxDecoration(color: primaryColor),
       headerAlignment: pw.Alignment.center,
-      cellPadding: const pw.EdgeInsets.all(6),
+      cellPadding: const pw.EdgeInsets.all(0),
       border: pw.TableBorder.all(color: greyColor, width: 0.5),
-      oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
       cellAlignment: pw.Alignment.center,
-      data: tableData.map((row) {
+      data: tableData.asMap().entries.map((entry) {
+        final index = entry.key;
+        final row = entry.value;
+
+        // Footer Row with Color
         if (row[0] == null) {
-          return [
-            'TOTAL', 
-            sumCount.toString(), 
-            sumIn.toStringAsFixed(2), 
-            sumOut.toStringAsFixed(2), 
-            sumNet.toStringAsFixed(2)
-          ];
+           pw.Widget footerCell(String text) {
+             return pw.Container(
+               color: primaryColor,
+               padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+               alignment: pw.Alignment.center,
+               child: pw.Text(text, style: pw.TextStyle(font: fontBold, color: white, fontSize: 8))
+             );
+           }
+           return [
+            footerCell('TOTAL'),
+            footerCell(sumCount.toString()),
+            footerCell(sumIn.toStringAsFixed(2)),
+            footerCell(sumOut.toStringAsFixed(2)),
+            footerCell(sumNet.toStringAsFixed(2)),
+           ];
         }
+
+        final bgColor = index % 2 == 1 ? lightGrey : white;
+        pw.Widget cell(pw.Widget child) {
+          return pw.Container(color: bgColor, padding: const pw.EdgeInsets.all(6), alignment: pw.Alignment.center, child: child);
+        }
+
         return [
-          row[0], 
-          row[1], 
-          // Green In
-          pw.Text((row[2] as double).toStringAsFixed(2), style: pw.TextStyle(color: greenColor, fontSize: 9)),
-          // Red Out
-          pw.Text((row[3] as double).toStringAsFixed(2), style: pw.TextStyle(color: redColor, fontSize: 9)),
-          (row[4] as double).toStringAsFixed(2)
+          cell(pw.Text(row[0] as String, style: const pw.TextStyle(fontSize: 9, color: textColor))),
+          cell(pw.Text(row[1] as String, style: const pw.TextStyle(fontSize: 9, color: textColor))),
+          cell(pw.Text((row[2] as double).toStringAsFixed(2), style: pw.TextStyle(color: greenColor, fontSize: 9, font: fontBold))),
+          cell(pw.Text((row[3] as double).toStringAsFixed(2), style: pw.TextStyle(color: redColor, fontSize: 9, font: fontBold))),
+          cell(pw.Text((row[4] as double).toStringAsFixed(2), style: const pw.TextStyle(fontSize: 9, color: textColor))),
         ];
       }).toList(),
     );
