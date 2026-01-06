@@ -119,7 +119,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
       }
 
       File file = await PdfGenerator.generateReport(
-        cashbookName: widget.cashbookName, // Passing REAL name
+        cashbookName: widget.cashbookName,
         entries: finalEntries,
         reportType: _reportType,
         filters: {
@@ -228,7 +228,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
               width: double.infinity,
               height: 48,
               child: OutlinedButton.icon(
-                onPressed: _showSaveDialog, // Open new dialog
+                onPressed: _showSaveDialog, 
                 style: OutlinedButton.styleFrom(backgroundColor: Colors.white, side: BorderSide(color: Colors.grey.shade200), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 icon: Icon(PhosphorIcons.downloadSimple(PhosphorIconsStyle.bold), color: const Color(0xFF334155)),
                 label: Text("Save To Downloads", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
@@ -249,57 +249,52 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         double maxWidth = constraints.maxWidth;
         double gap = 12.0;
 
-        // Params
+        // Dimensions
         double w3 = (maxWidth - 2 * gap) / 3;
         double w2 = (maxWidth - gap) / 2;
         double fixedHeight = 60.0; 
         double totalH = 2 * fixedHeight + gap; 
+        double currentW = isHidden ? w2 : w3;
 
-        // Center Point of Row 1
-        double centerRow1 = (maxWidth - w3) / 2; 
+        // Helper
+        Widget animItem({
+          required int keyVal,
+          required double left,
+          required double top,
+          required double width,
+          required double opacity,
+          required Widget child,
+        }) {
+          return AnimatedPositioned(
+            key: ValueKey(keyVal),
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOutCubic,
+            left: left,
+            top: top,
+            width: width,
+            height: fixedHeight, 
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: opacity,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal, 
+                physics: const NeverScrollableScrollPhysics(),
+                child: SizedBox(width: width, height: 60, child: child)
+              ),
+            ),
+          );
+        }
 
         return SizedBox(
           height: totalH,
           child: Stack(
             children: [
-              // 0: Date (Left)
-              _animItem(0, 0, 0, isHidden ? w2 : w3, 1, _buildFilterBtn("Date", _filterDate, () => _openFilterModal('date'))),
-
-              // 1: Type (Middle -> Shrinks to Center)
-              // When hiding: Left moves to center, width becomes 0
-              _animItem(1, 
-                isHidden ? (maxWidth / 2) : (w3 + gap), 
-                0, 
-                isHidden ? 0 : w3, 
-                isHidden ? 0 : 1, 
-                _buildFilterBtn("Type", _filterType, () => _openFilterModal('type'))),
-
-              // 2: Category (Right -> Slides Left)
-              _animItem(2, 
-                isHidden ? (w2 + gap) : (2 * (w3 + gap)), 
-                0, 
-                isHidden ? w2 : w3, 
-                1, 
-                _buildFilterBtn("Category", _filterCategory, () => _openFilterModal('category'))),
-
-              // 3: Payment (Left)
-              _animItem(3, 0, fixedHeight + gap, isHidden ? w2 : w3, 1, _buildFilterBtn("Payment", _filterPayment, () => _openFilterModal('payment'))),
-
-              // 4: Sort (Middle -> Shrinks to Center)
-              _animItem(4, 
-                isHidden ? (maxWidth / 2) : (w3 + gap), 
-                fixedHeight + gap, 
-                isHidden ? 0 : w3, 
-                isHidden ? 0 : 1, 
-                _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort'))),
-
-              // 5: Search (Right -> Slides Left)
-              _animItem(5, 
-                isHidden ? (w2 + gap) : (2 * (w3 + gap)), 
-                fixedHeight + gap, 
-                isHidden ? w2 : w3, 
-                1, 
-                _buildFilterBtn("Search", _filterSearch, () => _openFilterModal('search'))),
+              _animItem(0, 0, 0, currentW, 1, _buildFilterBtn("Date", _filterDate, () => _openFilterModal('date'))),
+              _animItem(1, isHidden ? (maxWidth / 2) : (w3 + gap), 0, isHidden ? 0 : w3, isHidden ? 0 : 1, _buildFilterBtn("Type", _filterType, () => _openFilterModal('type'))),
+              _animItem(2, isHidden ? (w2 + gap) : (2 * (w3 + gap)), 0, currentW, 1, _buildFilterBtn("Category", _filterCategory, () => _openFilterModal('category'))),
+              _animItem(3, 0, fixedHeight + gap, currentW, 1, _buildFilterBtn("Payment", _filterPayment, () => _openFilterModal('payment'))),
+              _animItem(4, isHidden ? (maxWidth / 2) : (w3 + gap), fixedHeight + gap, isHidden ? 0 : w3, isHidden ? 0 : 1, _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort'))),
+              _animItem(5, isHidden ? (w2 + gap) : (2 * (w3 + gap)), fixedHeight + gap, currentW, 1, _buildFilterBtn("Search", _filterSearch, () => _openFilterModal('search'))),
             ],
           ),
         );
@@ -307,6 +302,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
 
+  // --- SHORTCUT FOR ANIM ITEM (Used inside build) ---
   Widget _animItem(int key, double left, double top, double width, double opacity, Widget child) {
     return AnimatedPositioned(
       key: ValueKey(key),
@@ -328,8 +324,6 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
 
-  // ... (Rest of UI Helpers remain same) ...
-  // Ensure _buildFilterBtn uses center alignment as requested previously
   Widget _buildFilterBtn(String label, String value, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -349,7 +343,6 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
   
-  // Helpers for modals, dates, radios... (Keep existing implementations)
   void _openFilterModal(String type) {
     if (type == 'date') { _showDateInputs = false; _tempStartDate = null; _tempEndDate = null; }
     showModalBottomSheet(context: context, backgroundColor: Colors.transparent, isScrollControlled: true, builder: (context) => StatefulBuilder(builder: (context, setModalState) => Container(decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))), padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 40), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(3)))), const SizedBox(height: 24), Text(_getModalTitle(type), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))), const SizedBox(height: 16), if (type == 'search') _buildSearchInput() else if (type == 'date') _buildDateOptions(setModalState) else _buildListOptions(type)]))));
@@ -374,5 +367,53 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
   Widget _buildRadioItem(String val, String text, IconData icon) {
     bool isSelected = _reportType == val;
     return GestureDetector(onTap: () => setState(() => _reportType = val), child: AnimatedContainer(duration: const Duration(milliseconds: 200), padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: isSelected ? const Color(0xFFF8FAFC) : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelected ? const Color(0xFF4F46E5) : Colors.grey.shade200, width: isSelected ? 2 : 1), boxShadow: [if (isSelected) BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4)) else BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)]), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFEEF2FF), shape: BoxShape.circle), child: Icon(icon, color: const Color(0xFF4F46E5), size: 20)), const SizedBox(width: 12), Text(text, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF1E293B))), const Spacer(), AnimatedScale(scale: isSelected ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: Icon(PhosphorIcons.checkCircle(PhosphorIconsStyle.fill), color: const Color(0xFF4F46E5), size: 24))])));
+  }
+
+  // --- MISSING BUILD METHOD RESTORED ---
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          appBar: AppBar(backgroundColor: Colors.white, elevation: 0, leading: IconButton(icon: Icon(PhosphorIcons.arrowLeft(PhosphorIconsStyle.bold), color: const Color(0xFF475569)), onPressed: () => Navigator.pop(context)), title: Text("Generate Report", style: GoogleFonts.outfit(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold))),
+          body: _isLoadingMeta ? const Center(child: CircularProgressIndicator()) : Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("FILTERS", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
+                      const SizedBox(height: 12),
+                      
+                      // ANIMATED GRID
+                      _buildAnimatedGrid(), 
+                      
+                      const SizedBox(height: 32),
+                      Text("REPORT FORMAT", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("all", "All Entries List", PhosphorIcons.listDashes(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("day", "Day-Wise Summary", PhosphorIcons.calendarCheck(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("month", "Month-Wise Summary", PhosphorIcons.calendar(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("category", "Category-Wise Summary", PhosphorIcons.tag(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("payment", "Payment Mode Summary", PhosphorIcons.creditCard(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ),
+              Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade100))), child: SizedBox(width: double.infinity, height: 48, child: ElevatedButton.icon(onPressed: _generateReport, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 8, shadowColor: const Color(0xFFC7D2FE)), icon: Icon(PhosphorIcons.filePdf(PhosphorIconsStyle.bold), color: Colors.white), label: Text("Generate PDF Report", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))))),
+            ],
+          ),
+        ),
+        if (_isLoadingReport) Material(color: Colors.white.withOpacity(0.95), child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Lottie.asset('assets/animations/paperscan.json', width: 250, height: 250), Text("Processing Data...", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5))), const SizedBox(height: 4), Text("Please wait a moment", style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade400))]))),
+      ],
+    );
   }
 }
