@@ -60,7 +60,6 @@ class PdfGenerator {
         pageFormat: PdfPageFormat.a4,
         theme: pw.ThemeData.withFont(base: font, bold: fontBold),
         margin: const pw.EdgeInsets.all(32),
-        // This header appears at the top of the page layout (title, cards, filters)
         build: (context) => [
           _buildHeader(cashbookName, dateRangeStr, fontBold),
           pw.SizedBox(height: 12),
@@ -181,7 +180,6 @@ class PdfGenerator {
 
   // --- TABLE: ALL ENTRIES ---
   static pw.Widget _buildAllEntriesTable(List<Map<String, dynamic>> entries, pw.Font fontBold, double totalIn, double totalOut, double netBalance) {
-    // We use TableHelper to get automatic header repetition on new pages
     double runningBal = 0;
     
     // Prepare data
@@ -192,22 +190,22 @@ class PdfGenerator {
       final amt = (e['amount'] as num).toDouble();
       if (isInc) runningBal += amt; else runningBal -= amt;
 
-      // We construct custom widgets for cells later, but TableHelper expects strings or widgets
-      data.add([e, isInc, amt, runningBal]); // Store raw data to process in cell builder
+      // Add data to be processed by cell builder
+      data.add([e, isInc, amt, runningBal]); 
     }
 
-    // Add Footer Data (Marked with null to identify)
+    // Add Footer Data Marker
     data.add([null, false, 0.0, 0.0]); 
 
     return pw.TableHelper.fromTextArray(
       headers: ['DATE', 'REMARKS', 'CATEGORY', 'MODE', 'IN (+)', 'OUT (-)', 'BALANCE'],
       headerStyle: pw.TextStyle(font: fontBold, color: white, fontSize: 9),
       headerDecoration: const pw.BoxDecoration(color: primaryColor),
-      headerCellPadding: const pw.EdgeInsets.symmetric(vertical: 6),
       headerAlignment: pw.Alignment.center,
+      cellPadding: const pw.EdgeInsets.all(6), // Replaced headerCellPadding with cellPadding
       border: pw.TableBorder.all(color: greyColor, width: 0.5),
       oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
-      cellAlignment: pw.Alignment.center, // Center align all cells
+      cellAlignment: pw.Alignment.center,
       data: data.asMap().entries.map((entry) {
         final index = entry.key;
         final row = entry.value;
@@ -290,8 +288,8 @@ class PdfGenerator {
       headers: [firstCol, 'ENTRIES', 'TOTAL IN', 'TOTAL OUT', 'NET'],
       headerStyle: pw.TextStyle(font: fontBold, color: white, fontSize: 9),
       headerDecoration: const pw.BoxDecoration(color: primaryColor),
-      headerCellPadding: const pw.EdgeInsets.symmetric(vertical: 6),
       headerAlignment: pw.Alignment.center,
+      cellPadding: const pw.EdgeInsets.all(6),
       border: pw.TableBorder.all(color: greyColor, width: 0.5),
       oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
       cellAlignment: pw.Alignment.center,
@@ -336,7 +334,6 @@ class PdfGenerator {
 
     if (downloadsDir != null) {
       if (!await downloadsDir.exists()) await downloadsDir.create(recursive: true);
-      // Ensure .pdf extension
       String finalName = fileName.endsWith('.pdf') ? fileName : "$fileName.pdf";
       final newFile = File("${downloadsDir.path}/$finalName");
       await tempFile.copy(newFile.path);
