@@ -213,95 +213,91 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         double maxWidth = constraints.maxWidth;
         double gap = 12.0;
 
-        // 3-Column Params
+        // 3-Column Params (Standard State)
         double w3 = (maxWidth - 2 * gap) / 3;
-        double h3 = w3 / 1.4;
+        
+        // **FIX**: Determine a FIXED height based on the 3-column width
+        // This ensures buttons don't get taller when we switch to 2 columns
+        double fixedHeight = w3 / 1.35; 
 
-        // 2-Column Params (Items are larger)
+        // 2-Column Params (Expanded Width)
         double w2 = (maxWidth - gap) / 2;
-        double h2 = w2 / 1.4;
+        
+        // Current Width based on state
+        double currentW = isHidden ? w2 : w3;
+        
+        // Total container height is constant
+        double totalH = 2 * fixedHeight + gap; 
 
-        // Current Dimensions based on state
-        double itemW = isHidden ? w2 : w3;
-        double itemH = isHidden ? h2 : h3;
-        double totalH = 2 * itemH + gap; // Stack height expands/contracts
-
-        // Helper to position items with animation
         Widget animItem({
           required int keyVal,
           required double left,
           required double top,
           required double width,
-          required double height,
           required double opacity,
           required Widget child,
         }) {
           return AnimatedPositioned(
             key: ValueKey(keyVal),
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOutCubic, // Fluid motion
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOutBack, 
             left: left,
             top: top,
             width: width,
-            height: height,
+            height: fixedHeight, // Using fixed height
             child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 200),
               opacity: opacity,
-              child: SingleChildScrollView(
-                 physics: const NeverScrollableScrollPhysics(),
-                 child: SizedBox(height: height, child: child),
-              ), // Prevents overflow errors during shrink
+              child: child,
             ),
           );
         }
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOutCubic,
+        return SizedBox(
           height: totalH,
           child: Stack(
             children: [
-              // 0: Date (Always Row 1, Col 1)
-              animItem(keyVal: 0, left: 0, top: 0, width: itemW, height: itemH, opacity: 1, 
+              // Row 1
+              // Date: Always Col 1
+              animItem(keyVal: 0, left: 0, top: 0, width: currentW, opacity: 1, 
                 child: _buildFilterBtn("Date", _filterDate, () => _openFilterModal('date'))),
 
-              // 1: Type (Middle Top -> Disappears)
+              // Type: Col 2 (3-col) -> Gone
               animItem(keyVal: 1, 
-                left: isHidden ? w2 / 2 : w3 + gap, // Moves to center while shrinking
-                top: isHidden ? h2 / 2 : 0, 
+                left: isHidden ? w2 / 2 : w3 + gap, 
+                top: 0, 
                 width: isHidden ? 0 : w3, 
-                height: isHidden ? 0 : h3, 
                 opacity: isHidden ? 0 : 1, 
                 child: _buildFilterBtn("Type", _filterType, () => _openFilterModal('type'))),
 
-              // 2: Category (Right Top -> Slides to Row 1, Col 2)
+              // Category: Col 3 (3-col) -> Col 2 (2-col)
               animItem(keyVal: 2, 
                 left: isHidden ? w2 + gap : 2 * (w3 + gap), 
                 top: 0, 
-                width: itemW, height: itemH, opacity: 1, 
+                width: currentW, opacity: 1, 
                 child: _buildFilterBtn("Category", _filterCategory, () => _openFilterModal('category'))),
 
-              // 3: Payment (Left Bottom -> Stays Left Bottom, grows)
+              // Row 2
+              // Payment: Always Col 1
               animItem(keyVal: 3, 
                 left: 0, 
-                top: isHidden ? h2 + gap : h3 + gap, 
-                width: itemW, height: itemH, opacity: 1, 
+                top: fixedHeight + gap, 
+                width: currentW, opacity: 1, 
                 child: _buildFilterBtn("Payment", _filterPayment, () => _openFilterModal('payment'))),
 
-              // 4: Sort (Middle Bottom -> Disappears)
+              // Sort: Col 2 (3-col) -> Gone
               animItem(keyVal: 4, 
                 left: isHidden ? w2 / 2 : w3 + gap, 
-                top: isHidden ? h2 + gap + h2 / 2 : h3 + gap, 
+                top: fixedHeight + gap, 
                 width: isHidden ? 0 : w3, 
-                height: isHidden ? 0 : h3, 
                 opacity: isHidden ? 0 : 1, 
                 child: _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort'))),
 
-              // 5: Search (Right Bottom -> Slides to Row 2, Col 2)
+              // Search: Col 3 (3-col) -> Col 2 (2-col)
               animItem(keyVal: 5, 
                 left: isHidden ? w2 + gap : 2 * (w3 + gap), 
-                top: isHidden ? h2 + gap : h3 + gap, 
-                width: itemW, height: itemH, opacity: 1, 
+                top: fixedHeight + gap, 
+                width: currentW, opacity: 1, 
                 child: _buildFilterBtn("Search", _filterSearch, () => _openFilterModal('search'))),
             ],
           ),
@@ -350,7 +346,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
                       Text("FILTERS", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
                       const SizedBox(height: 12),
                       
-                      // ANIMATED GRID REPLACED HERE
+                      // ANIMATED GRID
                       _buildAnimatedGrid(),
                       
                       const SizedBox(height: 32),
@@ -379,11 +375,12 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
 
+  // UPDATED: Center Aligned Text
   Widget _buildFilterBtn(String label, String value, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -391,12 +388,12 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 2)],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center, // Center Align
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(label.toUpperCase(), style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade400), maxLines: 1),
+            Text(label.toUpperCase(), style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade400), maxLines: 1, textAlign: TextAlign.center),
             const SizedBox(height: 4),
-            Text(value, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5)), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(value, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5)), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
           ],
         ),
       ),
