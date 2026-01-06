@@ -7,19 +7,20 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PdfGenerator {
-  // --- COLORS ---
+  // --- COLORS (Explicit definitions to avoid opacity bugs) ---
   static const PdfColor primaryColor = PdfColor.fromInt(0xFF4F46E5); // Indigo 600
-  static const PdfColor accentColor = PdfColor.fromInt(0xFFEEF2FF); // Indigo 50
-  static const PdfColor textColor = PdfColor.fromInt(0xFF1E293B);   // Slate 800
-  static const PdfColor greyColor = PdfColor.fromInt(0xFF94A3B8);   // Slate 400
-  static const PdfColor lightGrey = PdfColor.fromInt(0xFFF1F5F9);   // Slate 100
-  static const PdfColor greenColor = PdfColor.fromInt(0xFF059669);  // Emerald 600
-  static const PdfColor redColor = PdfColor.fromInt(0xFFE11D48);    // Rose 600
-
-  // --- HELPER: Fix for .withOpacity() ---
-  static PdfColor _withOpacity(PdfColor color, double opacity) {
-    return PdfColor(color.red, color.green, color.blue, opacity);
-  }
+  static const PdfColor primaryLight = PdfColor.fromInt(0xFFEEF2FF); // Indigo 50
+  
+  static const PdfColor greenColor = PdfColor.fromInt(0xFF059669);   // Emerald 600
+  static const PdfColor greenLight = PdfColor.fromInt(0xFFECFDF5);   // Emerald 50
+  
+  static const PdfColor redColor = PdfColor.fromInt(0xFFE11D48);     // Rose 600
+  static const PdfColor redLight = PdfColor.fromInt(0xFFFFF1F2);     // Rose 50
+  
+  static const PdfColor textColor = PdfColor.fromInt(0xFF1E293B);    // Slate 800
+  static const PdfColor greyColor = PdfColor.fromInt(0xFF94A3B8);    // Slate 400
+  static const PdfColor lightGrey = PdfColor.fromInt(0xFFF1F5F9);    // Slate 100
+  static const PdfColor white = PdfColors.white;
 
   static Future<File> generateReport({
     required String cashbookName,
@@ -35,7 +36,7 @@ class PdfGenerator {
     double totalIn = 0;
     double totalOut = 0;
     
-    // Sort entries by date (Oldest first)
+    // Sort Oldest -> Newest
     entries.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
 
     for (var e in entries) {
@@ -44,15 +45,21 @@ class PdfGenerator {
     }
     double netBalance = totalIn - totalOut;
 
-    // 2. DETERMINE REAL DATE RANGE
+    // 2. DATE RANGE
     String dateRangeStr = "No Entries";
     if (entries.isNotEmpty) {
-      final start = entries.first['date'] as DateTime; // Oldest
-      final end = entries.last['date'] as DateTime;   // Newest
+      final start = entries.first['date'] as DateTime; 
+      final end = entries.last['date'] as DateTime;
       dateRangeStr = "${DateFormat('MMM d, y').format(start)} - ${DateFormat('MMM d, y').format(end)}";
     }
 
-    // 3. BUILD PAGE
+    // 3. CLEAN FILTERS (Remove Defaults)
+    final cleanedFilters = Map<String, String>.from(filters);
+    cleanedFilters.removeWhere((key, value) => 
+      value == "All" || value == "None" || value == "Newest" || value == "Oldest"
+    );
+
+    // 4. BUILD PAGE
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -65,15 +72,17 @@ class PdfGenerator {
           pw.Divider(color: greyColor, thickness: 0.5),
           pw.SizedBox(height: 12),
 
-          // SUMMARY CARDS
+          // SUMMARY CARDS (Corrected Colors)
           _buildSummaryCards(totalIn, totalOut, netBalance, fontBold),
           pw.SizedBox(height: 20),
 
-          // ACTIVE FILTERS
-          _buildActiveFilters(filters, fontBold),
-          pw.SizedBox(height: 20),
+          // ACTIVE FILTERS (Only if any exist)
+          if (cleanedFilters.isNotEmpty) ...[
+            _buildActiveFilters(cleanedFilters, fontBold),
+            pw.SizedBox(height: 20),
+          ],
 
-          // TABLE (Based on Report Type)
+          // TABLE
           if (entries.isEmpty)
             pw.Center(child: pw.Text("No entries found for this period.", style: const pw.TextStyle(color: greyColor)))
           else if (reportType == 'all') 
@@ -81,7 +90,7 @@ class PdfGenerator {
           else 
             _buildGroupedTable(entries, reportType, fontBold),
           
-          // FOOTER NOTE
+          // GENERATED TIMESTAMP
           pw.SizedBox(height: 20),
           pw.Align(
             alignment: pw.Alignment.centerRight,
@@ -103,9 +112,10 @@ class PdfGenerator {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text("CASHBOOK REPORT", style: pw.TextStyle(font: fontBold, fontSize: 10, color: greyColor, letterSpacing: 1.5)),
-            pw.SizedBox(height: 4),
+            // Replaced static title with actual Name + Label
             pw.Text(name, style: pw.TextStyle(font: fontBold, fontSize: 22, color: primaryColor)),
+            pw.SizedBox(height: 4),
+            pw.Text("OFFICIAL STATEMENT", style: pw.TextStyle(font: fontBold, fontSize: 9, color: greyColor, letterSpacing: 1.5)),
           ],
         ),
         pw.Column(
@@ -124,34 +134,34 @@ class PdfGenerator {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        _buildCard("Total Cash In", totalIn, greenColor, fontBold),
+        // Using Explicit Colors
+        _buildCard("Total Cash In", totalIn, greenColor, greenLight, fontBold),
         pw.SizedBox(width: 10),
-        _buildCard("Total Cash Out", totalOut, redColor, fontBold),
+        _buildCard("Total Cash Out", totalOut, redColor, redLight, fontBold),
         pw.SizedBox(width: 10),
-        _buildCard("Net Balance", net, primaryColor, fontBold, isNet: true),
+        _buildCard("Net Balance", net, primaryColor, primaryLight, fontBold, isNet: true),
       ],
     );
   }
 
-  static pw.Widget _buildCard(String label, double amount, PdfColor color, pw.Font fontBold, {bool isNet = false}) {
+  static pw.Widget _buildCard(String label, double amount, PdfColor fg, PdfColor bg, pw.Font fontBold, {bool isNet = false}) {
     String prefix = isNet ? (amount >= 0 ? '+' : '-') : '';
     return pw.Expanded(
       child: pw.Container(
         padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: pw.BoxDecoration(
-          // FIXED: Use helper instead of .withOpacity
-          color: _withOpacity(color, 0.05),
+          color: bg, // Explicit Light Color
           borderRadius: pw.BorderRadius.circular(6),
-          border: pw.Border.all(color: _withOpacity(color, 0.2)),
+          border: pw.Border.all(color: fg, width: 0.5), // Subtle border
         ),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text(label.toUpperCase(), style: pw.TextStyle(font: fontBold, fontSize: 8, color: color)),
+            pw.Text(label.toUpperCase(), style: pw.TextStyle(font: fontBold, fontSize: 8, color: fg)),
             pw.SizedBox(height: 4),
             pw.Text(
               "$prefix ${amount.abs().toStringAsFixed(2)}",
-              style: pw.TextStyle(font: fontBold, fontSize: 14, color: color),
+              style: pw.TextStyle(font: fontBold, fontSize: 14, color: fg),
             ),
           ],
         ),
@@ -161,10 +171,6 @@ class PdfGenerator {
 
   // --- COMPONENT: FILTERS ---
   static pw.Widget _buildActiveFilters(Map<String, String> filters, pw.Font fontBold) {
-    final activeFilters = filters.entries.where((e) => e.value != "All" && e.value != "None" && e.value != "Newest").toList();
-    
-    if (activeFilters.isEmpty) return pw.SizedBox();
-
     return pw.Container(
       width: double.infinity,
       padding: const pw.EdgeInsets.all(8),
@@ -172,7 +178,7 @@ class PdfGenerator {
       child: pw.Wrap(
         spacing: 12,
         runSpacing: 4,
-        children: activeFilters.map((e) {
+        children: filters.entries.map((e) {
           return pw.RichText(
             text: pw.TextSpan(
               children: [
@@ -188,17 +194,16 @@ class PdfGenerator {
 
   // --- TABLE: ALL ENTRIES ---
   static pw.Widget _buildAllEntriesTable(List<Map<String, dynamic>> entries, pw.Font fontBold, double totalIn, double totalOut) {
-    final headerStyle = pw.TextStyle(font: fontBold, color: PdfColors.white, fontSize: 9);
+    final headerStyle = pw.TextStyle(font: fontBold, color: white, fontSize: 9);
     
     return pw.TableHelper.fromTextArray(
       headers: ['DATE', 'REMARKS', 'CATEGORY', 'MODE', 'IN (+)', 'OUT (-)'],
       headerStyle: headerStyle,
-      headerDecoration: const pw.BoxDecoration(color: primaryColor),
+      headerDecoration: const pw.BoxDecoration(color: primaryColor), // Indigo Header
       cellStyle: const pw.TextStyle(fontSize: 9, color: textColor),
       cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      // FIXED: Use helper
-      border: pw.TableBorder.all(color: _withOpacity(greyColor, 0.2), width: 0.5),
-      rowDecoration: const pw.BoxDecoration(color: PdfColors.white),
+      border: pw.TableBorder.all(color: greyColor, width: 0.5),
+      rowDecoration: const pw.BoxDecoration(color: white),
       oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
       data: [
         ...entries.map((e) {
@@ -213,85 +218,61 @@ class PdfGenerator {
             !isInc ? e['amount'].toStringAsFixed(2) : "",
           ];
         }).toList(),
-        // FOOTER ROW
+        // FOOTER ROW (MATCHES HEADER COLOR)
         ['TOTAL', '', '', '', totalIn.toStringAsFixed(2), totalOut.toStringAsFixed(2)]
       ],
-      // FIXED: Removed duplicated rowDecoration argument
     );
   }
 
-  // --- TABLE: GROUPED (Day, Month, Category, Payment) ---
+  // --- TABLE: GROUPED ---
   static pw.Widget _buildGroupedTable(List<Map<String, dynamic>> entries, String type, pw.Font fontBold) {
-    // 1. Group Data
+    // 1. Group Data (Same logic as before)
     Map<String, Map<String, double>> groups = {};
-    
     for (var e in entries) {
       String key = "";
       DateTime date = e['date'];
-      
       if (type == 'day') key = DateFormat('MMM d, y').format(date);
       else if (type == 'month') key = DateFormat('MMMM y').format(date);
       else if (type == 'category') key = e['category'] ?? 'Uncategorized';
       else if (type == 'payment') key = e['paymentMethod'] ?? 'Unknown';
 
       if (!groups.containsKey(key)) groups[key] = {'in': 0.0, 'out': 0.0, 'count': 0};
-      
       if (e['type'] == 'in') groups[key]!['in'] = groups[key]!['in']! + (e['amount'] as num).toDouble();
       else groups[key]!['out'] = groups[key]!['out']! + (e['amount'] as num).toDouble();
-      
       groups[key]!['count'] = groups[key]!['count']! + 1;
     }
 
-    // 2. Prep Data & Totals
+    // 2. Prep Table
     List<List<String>> tableData = [];
-    double sumIn = 0;
-    double sumOut = 0;
-    double sumNet = 0;
+    double sumIn = 0, sumOut = 0, sumNet = 0;
     int sumCount = 0;
 
     groups.forEach((key, val) {
       double net = val['in']! - val['out']!;
-      sumIn += val['in']!;
-      sumOut += val['out']!;
-      sumNet += net;
-      sumCount += val['count']!.toInt();
-
-      tableData.add([
-        key,
-        val['count']!.toInt().toString(),
-        val['in']!.toStringAsFixed(2),
-        val['out']!.toStringAsFixed(2),
-        net.toStringAsFixed(2),
-      ]);
+      sumIn += val['in']!; sumOut += val['out']!; sumNet += net; sumCount += val['count']!.toInt();
+      tableData.add([key, val['count']!.toInt().toString(), val['in']!.toStringAsFixed(2), val['out']!.toStringAsFixed(2), net.toStringAsFixed(2)]);
     });
 
-    // 3. Add Footer Row
-    tableData.add([
-      "TOTAL",
-      sumCount.toString(),
-      sumIn.toStringAsFixed(2),
-      sumOut.toStringAsFixed(2),
-      sumNet.toStringAsFixed(2)
-    ]);
+    // Footer Row
+    tableData.add(["TOTAL", sumCount.toString(), sumIn.toStringAsFixed(2), sumOut.toStringAsFixed(2), sumNet.toStringAsFixed(2)]);
 
-    String firstColHeader = type.toUpperCase();
-    if(type == 'day') firstColHeader = "DATE";
-    if(type == 'month') firstColHeader = "MONTH";
+    String firstCol = type.toUpperCase();
+    if(type == 'day') firstCol = "DATE";
+    if(type == 'month') firstCol = "MONTH";
 
     return pw.TableHelper.fromTextArray(
-      headers: [firstColHeader, 'ENTRIES', 'TOTAL IN', 'TOTAL OUT', 'NET'],
-      headerStyle: pw.TextStyle(font: fontBold, color: PdfColors.white, fontSize: 9),
-      headerDecoration: const pw.BoxDecoration(color: primaryColor),
+      headers: [firstCol, 'ENTRIES', 'TOTAL IN', 'TOTAL OUT', 'NET'],
+      headerStyle: pw.TextStyle(font: fontBold, color: white, fontSize: 9),
+      headerDecoration: const pw.BoxDecoration(color: primaryColor), // Indigo Header
       cellStyle: const pw.TextStyle(fontSize: 9, color: textColor),
       cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      // FIXED: Use helper
-      border: pw.TableBorder.all(color: _withOpacity(greyColor, 0.2), width: 0.5),
+      border: pw.TableBorder.all(color: greyColor, width: 0.5),
       oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
       data: tableData,
     );
   }
 
-  // --- SAVE UTILS ---
+  // --- SAVE ---
   static Future<File> _savePdfFile(String name, pw.Document pdf) async {
     final bytes = await pdf.save();
     final dir = await getApplicationDocumentsDirectory();
@@ -302,20 +283,13 @@ class PdfGenerator {
   }
   
   static Future<void> saveToDownloads(File tempFile, String cashbookName) async {
-    if (!await Permission.storage.request().isGranted) {
-        // Continue anyway; older Androids might fail but scoped storage on new ones works via other paths
-    }
-
+    if (!await Permission.storage.request().isGranted) {} // Handle perms
     Directory? downloadsDir;
-    if (Platform.isAndroid) {
-      downloadsDir = Directory('/storage/emulated/0/Download');
-    } else {
-      downloadsDir = await getApplicationDocumentsDirectory();
-    }
+    if (Platform.isAndroid) downloadsDir = Directory('/storage/emulated/0/Download');
+    else downloadsDir = await getApplicationDocumentsDirectory();
 
     if (downloadsDir != null) {
       if (!await downloadsDir.exists()) await downloadsDir.create(recursive: true);
-      
       final now = DateTime.now();
       final fileName = "${cashbookName.replaceAll(' ', '_')}_${DateFormat('dd_MM_yyyy').format(now)}.pdf";
       final newFile = File("${downloadsDir.path}/$fileName");
