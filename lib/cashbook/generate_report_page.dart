@@ -205,7 +205,6 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
 
   // --- ANIMATED GRID LAYOUT ---
   Widget _buildAnimatedGrid() {
-    // Determine if we should be in 2-column mode (hiding Type and Sort)
     bool isHidden = _reportType == 'category' || _reportType == 'payment';
 
     return LayoutBuilder(
@@ -213,22 +212,14 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         double maxWidth = constraints.maxWidth;
         double gap = 12.0;
 
-        // 3-Column Params (Standard State)
+        // Dimensions
         double w3 = (maxWidth - 2 * gap) / 3;
-        
-        // **FIX**: Determine a FIXED height based on the 3-column width
-        // This ensures buttons don't get taller when we switch to 2 columns
-        double fixedHeight = w3 / 1.35; 
-
-        // 2-Column Params (Expanded Width)
         double w2 = (maxWidth - gap) / 2;
-        
-        // Current Width based on state
+        double fixedHeight = 60.0; // Fixed smaller height
         double currentW = isHidden ? w2 : w3;
-        
-        // Total container height is constant
         double totalH = 2 * fixedHeight + gap; 
 
+        // Animation Helper
         Widget animItem({
           required int keyVal,
           required double left,
@@ -240,13 +231,13 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
           return AnimatedPositioned(
             key: ValueKey(keyVal),
             duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOutBack, 
+            curve: Curves.easeInOutCubic, // Smooth, no bounce
             left: left,
             top: top,
             width: width,
-            height: fixedHeight, // Using fixed height
+            height: fixedHeight, 
             child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
+              duration: const Duration(milliseconds: 300),
               opacity: opacity,
               child: child,
             ),
@@ -258,19 +249,16 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
           child: Stack(
             children: [
               // Row 1
-              // Date: Always Col 1
               animItem(keyVal: 0, left: 0, top: 0, width: currentW, opacity: 1, 
                 child: _buildFilterBtn("Date", _filterDate, () => _openFilterModal('date'))),
 
-              // Type: Col 2 (3-col) -> Gone
               animItem(keyVal: 1, 
-                left: isHidden ? w2 / 2 : w3 + gap, 
+                left: isHidden ? w2 / 2 : w3 + gap, // Fades out in center
                 top: 0, 
                 width: isHidden ? 0 : w3, 
                 opacity: isHidden ? 0 : 1, 
                 child: _buildFilterBtn("Type", _filterType, () => _openFilterModal('type'))),
 
-              // Category: Col 3 (3-col) -> Col 2 (2-col)
               animItem(keyVal: 2, 
                 left: isHidden ? w2 + gap : 2 * (w3 + gap), 
                 top: 0, 
@@ -278,22 +266,19 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
                 child: _buildFilterBtn("Category", _filterCategory, () => _openFilterModal('category'))),
 
               // Row 2
-              // Payment: Always Col 1
               animItem(keyVal: 3, 
                 left: 0, 
                 top: fixedHeight + gap, 
                 width: currentW, opacity: 1, 
                 child: _buildFilterBtn("Payment", _filterPayment, () => _openFilterModal('payment'))),
 
-              // Sort: Col 2 (3-col) -> Gone
               animItem(keyVal: 4, 
-                left: isHidden ? w2 / 2 : w3 + gap, 
+                left: isHidden ? w2 / 2 : w3 + gap, // Fades out in center
                 top: fixedHeight + gap, 
                 width: isHidden ? 0 : w3, 
                 opacity: isHidden ? 0 : 1, 
                 child: _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort'))),
 
-              // Search: Col 3 (3-col) -> Col 2 (2-col)
               animItem(keyVal: 5, 
                 left: isHidden ? w2 + gap : 2 * (w3 + gap), 
                 top: fixedHeight + gap, 
@@ -345,10 +330,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
                     children: [
                       Text("FILTERS", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
                       const SizedBox(height: 12),
-                      
-                      // ANIMATED GRID
-                      _buildAnimatedGrid(),
-                      
+                      _buildAnimatedGrid(), // Updated Animation Logic
                       const SizedBox(height: 32),
                       Text("REPORT FORMAT", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
                       const SizedBox(height: 12),
@@ -375,12 +357,12 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
 
-  // UPDATED: Center Aligned Text
+  // UPDATED BUTTON STYLE
   Widget _buildFilterBtn(String label, String value, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10), // Reduced Vertical Padding
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -388,10 +370,10 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 2)],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center, // Center Align
+          crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(label.toUpperCase(), style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade400), maxLines: 1, textAlign: TextAlign.center),
+            Text(label.toUpperCase(), style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)), maxLines: 1, textAlign: TextAlign.center), // BLACK Title
             const SizedBox(height: 4),
             Text(value, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5)), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
           ],
