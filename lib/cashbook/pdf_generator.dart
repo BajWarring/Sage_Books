@@ -7,20 +7,22 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PdfGenerator {
-  // --- COLORS (Explicit definitions to avoid opacity bugs) ---
+  // --- COLORS ---
   static const PdfColor primaryColor = PdfColor.fromInt(0xFF4F46E5); // Indigo 600
   static const PdfColor primaryLight = PdfColor.fromInt(0xFFEEF2FF); // Indigo 50
-  
   static const PdfColor greenColor = PdfColor.fromInt(0xFF059669);   // Emerald 600
   static const PdfColor greenLight = PdfColor.fromInt(0xFFECFDF5);   // Emerald 50
-  
   static const PdfColor redColor = PdfColor.fromInt(0xFFE11D48);     // Rose 600
   static const PdfColor redLight = PdfColor.fromInt(0xFFFFF1F2);     // Rose 50
-  
   static const PdfColor textColor = PdfColor.fromInt(0xFF1E293B);    // Slate 800
   static const PdfColor greyColor = PdfColor.fromInt(0xFF94A3B8);    // Slate 400
   static const PdfColor lightGrey = PdfColor.fromInt(0xFFF1F5F9);    // Slate 100
   static const PdfColor white = PdfColors.white;
+
+  // --- HELPER FOR OPACITY ---
+  static PdfColor _withOpacity(PdfColor color, double opacity) {
+    return PdfColor(color.red, color.green, color.blue, opacity);
+  }
 
   static Future<File> generateReport({
     required String cashbookName,
@@ -32,11 +34,11 @@ class PdfGenerator {
     final font = await PdfGoogleFonts.outfitRegular();
     final fontBold = await PdfGoogleFonts.outfitBold();
 
-    // 1. CALCULATE TOTALS
+    // 1. CALCULATE TOTALS & SORT
     double totalIn = 0;
     double totalOut = 0;
     
-    // Sort Oldest -> Newest
+    // Sort Oldest -> Newest for Running Balance Calculation
     entries.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
 
     for (var e in entries) {
@@ -53,7 +55,7 @@ class PdfGenerator {
       dateRangeStr = "${DateFormat('MMM d, y').format(start)} - ${DateFormat('MMM d, y').format(end)}";
     }
 
-    // 3. CLEAN FILTERS (Remove Defaults)
+    // 3. CLEAN FILTERS
     final cleanedFilters = Map<String, String>.from(filters);
     cleanedFilters.removeWhere((key, value) => 
       value == "All" || value == "None" || value == "Newest" || value == "Oldest"
@@ -72,11 +74,11 @@ class PdfGenerator {
           pw.Divider(color: greyColor, thickness: 0.5),
           pw.SizedBox(height: 12),
 
-          // SUMMARY CARDS (Corrected Colors)
+          // SUMMARY CARDS
           _buildSummaryCards(totalIn, totalOut, netBalance, fontBold),
           pw.SizedBox(height: 20),
 
-          // ACTIVE FILTERS (Only if any exist)
+          // ACTIVE FILTERS
           if (cleanedFilters.isNotEmpty) ...[
             _buildActiveFilters(cleanedFilters, fontBold),
             pw.SizedBox(height: 20),
@@ -86,11 +88,11 @@ class PdfGenerator {
           if (entries.isEmpty)
             pw.Center(child: pw.Text("No entries found for this period.", style: const pw.TextStyle(color: greyColor)))
           else if (reportType == 'all') 
-            _buildAllEntriesTable(entries, fontBold, totalIn, totalOut)
+            _buildAllEntriesTable(entries, fontBold, totalIn, totalOut, netBalance)
           else 
             _buildGroupedTable(entries, reportType, fontBold),
           
-          // GENERATED TIMESTAMP
+          // FOOTER NOTE
           pw.SizedBox(height: 20),
           pw.Align(
             alignment: pw.Alignment.centerRight,
@@ -112,10 +114,9 @@ class PdfGenerator {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            // Replaced static title with actual Name + Label
             pw.Text(name, style: pw.TextStyle(font: fontBold, fontSize: 22, color: primaryColor)),
             pw.SizedBox(height: 4),
-            pw.Text("OFFICIAL STATEMENT", style: pw.TextStyle(font: fontBold, fontSize: 9, color: greyColor, letterSpacing: 1.5)),
+            pw.Text("OFFICIAL REPORT", style: pw.TextStyle(font: fontBold, fontSize: 9, color: greyColor, letterSpacing: 1.5)),
           ],
         ),
         pw.Column(
@@ -134,7 +135,6 @@ class PdfGenerator {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        // Using Explicit Colors
         _buildCard("Total Cash In", totalIn, greenColor, greenLight, fontBold),
         pw.SizedBox(width: 10),
         _buildCard("Total Cash Out", totalOut, redColor, redLight, fontBold),
@@ -150,9 +150,9 @@ class PdfGenerator {
       child: pw.Container(
         padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: pw.BoxDecoration(
-          color: bg, // Explicit Light Color
+          color: bg,
           borderRadius: pw.BorderRadius.circular(6),
-          border: pw.Border.all(color: fg, width: 0.5), // Subtle border
+          border: pw.Border.all(color: fg, width: 0.5),
         ),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -192,41 +192,96 @@ class PdfGenerator {
     );
   }
 
-  // --- TABLE: ALL ENTRIES ---
-  static pw.Widget _buildAllEntriesTable(List<Map<String, dynamic>> entries, pw.Font fontBold, double totalIn, double totalOut) {
+  // --- TABLE: ALL ENTRIES (With Running Balance) ---
+  static pw.Widget _buildAllEntriesTable(List<Map<String, dynamic>> entries, pw.Font fontBold, double totalIn, double totalOut, double netBalance) {
     final headerStyle = pw.TextStyle(font: fontBold, color: white, fontSize: 9);
     
-    return pw.TableHelper.fromTextArray(
-      headers: ['DATE', 'REMARKS', 'CATEGORY', 'MODE', 'IN (+)', 'OUT (-)'],
-      headerStyle: headerStyle,
-      headerDecoration: const pw.BoxDecoration(color: primaryColor), // Indigo Header
-      cellStyle: const pw.TextStyle(fontSize: 9, color: textColor),
-      cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      border: pw.TableBorder.all(color: greyColor, width: 0.5),
-      rowDecoration: const pw.BoxDecoration(color: white),
-      oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
-      data: [
-        ...entries.map((e) {
-          final date = e['date'] as DateTime;
-          final isInc = e['type'] == 'in';
-          return [
-            DateFormat('dd/MM/yy').format(date),
-            e['remarks'],
-            e['category'] ?? '-',
-            e['paymentMethod'] ?? '-',
-            isInc ? e['amount'].toStringAsFixed(2) : "",
-            !isInc ? e['amount'].toStringAsFixed(2) : "",
-          ];
+    // Calculate Running Balances
+    double runningBal = 0;
+    List<List<dynamic>> rows = [];
+    
+    for (var e in entries) {
+      final date = e['date'] as DateTime;
+      final isInc = e['type'] == 'in';
+      final amt = (e['amount'] as num).toDouble();
+      
+      if (isInc) runningBal += amt; else runningBal -= amt;
+
+      rows.add([
+        date, // Pass DateTime object to be formatted in cell
+        e['remarks'],
+        e['category'] ?? '-',
+        e['paymentMethod'] ?? '-',
+        isInc ? amt.toStringAsFixed(2) : "",
+        !isInc ? amt.toStringAsFixed(2) : "",
+        runningBal.toStringAsFixed(2),
+      ]);
+    }
+
+    // Add Footer Row
+    rows.add(['TOTAL', '', '', '', totalIn.toStringAsFixed(2), totalOut.toStringAsFixed(2), netBalance.toStringAsFixed(2)]);
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: _withOpacity(greyColor, 0.3), width: 0.5),
+      children: [
+        // Header
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: primaryColor),
+          children: ['DATE', 'REMARKS', 'CATEGORY', 'MODE', 'IN (+)', 'OUT (-)', 'BALANCE']
+              .map((h) => pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                    child: pw.Text(h, style: headerStyle, textAlign: pw.TextAlign.center)
+                  ))
+              .toList(),
+        ),
+        // Rows
+        ...rows.asMap().entries.map((entry) {
+          int idx = entry.key;
+          var row = entry.value;
+          bool isFooter = idx == rows.length - 1;
+          
+          // Style Footer
+          if (isFooter) {
+            return pw.TableRow(
+              decoration: const pw.BoxDecoration(color: primaryColor),
+              children: row.map((cell) => pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                child: pw.Text(cell.toString(), style: pw.TextStyle(font: fontBold, color: white, fontSize: 9), textAlign: pw.TextAlign.center)
+              )).toList(),
+            );
+          }
+
+          // Normal Row
+          return pw.TableRow(
+            decoration: pw.BoxDecoration(color: idx % 2 == 0 ? white : lightGrey),
+            children: [
+              // Date Cell with Time
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(6),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  children: [
+                    pw.Text(DateFormat('dd/MM/yy').format(row[0] as DateTime), style: const pw.TextStyle(fontSize: 9, color: textColor)),
+                    pw.Text(DateFormat('h:mm a').format(row[0] as DateTime), style: const pw.TextStyle(fontSize: 7, color: greyColor)),
+                  ],
+                ),
+              ),
+              // Other Cells
+              ...row.sublist(1).map((cell) => pw.Padding(
+                padding: const pw.EdgeInsets.all(6),
+                child: pw.Text(cell.toString(), style: const pw.TextStyle(fontSize: 9, color: textColor), textAlign: pw.TextAlign.center),
+              )).toList(),
+            ],
+          );
         }).toList(),
-        // FOOTER ROW (MATCHES HEADER COLOR)
-        ['TOTAL', '', '', '', totalIn.toStringAsFixed(2), totalOut.toStringAsFixed(2)]
       ],
     );
   }
 
   // --- TABLE: GROUPED ---
   static pw.Widget _buildGroupedTable(List<Map<String, dynamic>> entries, String type, pw.Font fontBold) {
-    // 1. Group Data (Same logic as before)
+    // 1. Group Data
     Map<String, Map<String, double>> groups = {};
     for (var e in entries) {
       String key = "";
@@ -260,15 +315,44 @@ class PdfGenerator {
     if(type == 'day') firstCol = "DATE";
     if(type == 'month') firstCol = "MONTH";
 
-    return pw.TableHelper.fromTextArray(
-      headers: [firstCol, 'ENTRIES', 'TOTAL IN', 'TOTAL OUT', 'NET'],
-      headerStyle: pw.TextStyle(font: fontBold, color: white, fontSize: 9),
-      headerDecoration: const pw.BoxDecoration(color: primaryColor), // Indigo Header
-      cellStyle: const pw.TextStyle(fontSize: 9, color: textColor),
-      cellPadding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      border: pw.TableBorder.all(color: greyColor, width: 0.5),
-      oddRowDecoration: const pw.BoxDecoration(color: lightGrey),
-      data: tableData,
+    return pw.Table(
+      border: pw.TableBorder.all(color: _withOpacity(greyColor, 0.3), width: 0.5),
+      children: [
+        // Header
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: primaryColor),
+          children: [firstCol, 'ENTRIES', 'TOTAL IN', 'TOTAL OUT', 'NET']
+              .map((h) => pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                    child: pw.Text(h, style: pw.TextStyle(font: fontBold, color: white, fontSize: 9), textAlign: pw.TextAlign.center)
+                  ))
+              .toList(),
+        ),
+        // Rows
+        ...tableData.asMap().entries.map((entry) {
+          int idx = entry.key;
+          var row = entry.value;
+          bool isFooter = idx == tableData.length - 1;
+
+          if (isFooter) {
+            return pw.TableRow(
+              decoration: const pw.BoxDecoration(color: primaryColor),
+              children: row.map((cell) => pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                child: pw.Text(cell, style: pw.TextStyle(font: fontBold, color: white, fontSize: 9), textAlign: pw.TextAlign.center)
+              )).toList(),
+            );
+          }
+
+          return pw.TableRow(
+            decoration: pw.BoxDecoration(color: idx % 2 == 0 ? white : lightGrey),
+            children: row.map((cell) => pw.Padding(
+              padding: const pw.EdgeInsets.all(6),
+              child: pw.Text(cell, style: const pw.TextStyle(fontSize: 9, color: textColor), textAlign: pw.TextAlign.center),
+            )).toList(),
+          );
+        }).toList(),
+      ],
     );
   }
 
@@ -283,7 +367,7 @@ class PdfGenerator {
   }
   
   static Future<void> saveToDownloads(File tempFile, String cashbookName) async {
-    if (!await Permission.storage.request().isGranted) {} // Handle perms
+    if (!await Permission.storage.request().isGranted) {} 
     Directory? downloadsDir;
     if (Platform.isAndroid) downloadsDir = Directory('/storage/emulated/0/Download');
     else downloadsDir = await getApplicationDocumentsDirectory();
