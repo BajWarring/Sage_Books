@@ -26,6 +26,7 @@ class GenerateReportPage extends StatefulWidget {
 }
 
 class _GenerateReportPageState extends State<GenerateReportPage> {
+  // State
   String _filterDate = "All Time";
   String _filterType = "All";
   String _filterCategory = "All";
@@ -70,24 +71,35 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     }
   }
 
+  // --- ACTIONS ---
+
   void _generateReport() async {
     setState(() => _isLoadingReport = true);
+
     try {
-      Query query = FirebaseFirestore.instance.collection('users').doc(widget.user.uid).collection('cashbooks').doc(widget.cashbookId).collection('entries');
+      Query query = FirebaseFirestore.instance.collection('users')
+          .doc(widget.user.uid)
+          .collection('cashbooks')
+          .doc(widget.cashbookId)
+          .collection('entries');
+
       DateTime now = DateTime.now();
       DateTime start = DateTime(2000); 
       DateTime end = DateTime(2100);
+
       if (_filterDate == "Last Week") start = now.subtract(const Duration(days: 7));
       if (_filterDate == "Last Month") start = DateTime(now.year, now.month - 1, now.day);
       if (_filterDate == "Last Year") start = DateTime(now.year - 1, now.month, now.day);
       if (_startDate != null) { start = _startDate!; end = _endDate!; }
 
       final snapshot = await query.orderBy('date', descending: _filterSort == 'Newest').get();
+      
       List<Map<String, dynamic>> finalEntries = [];
 
       for (var doc in snapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         data['date'] = (data['date'] as Timestamp).toDate(); 
+
         DateTime date = data['date'];
         if (date.isBefore(start) || date.isAfter(end)) continue;
         if (_filterType != "All") {
@@ -98,7 +110,8 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         if (_filterPayment != "All" && data['paymentMethod'] != _filterPayment) continue;
         if (_filterSearch != "None") {
            String term = _filterSearch.toLowerCase();
-           bool match = data['remarks'].toString().toLowerCase().contains(term) || data['category'].toString().toLowerCase().contains(term);
+           bool match = data['remarks'].toString().toLowerCase().contains(term) ||
+                        data['category'].toString().toLowerCase().contains(term);
            if (!match) continue;
         }
         finalEntries.add(data);
@@ -108,18 +121,27 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         cashbookName: widget.cashbookName,
         entries: finalEntries,
         reportType: _reportType,
-        filters: {'Type': _filterType, 'Category': _filterCategory, 'Payment': _filterPayment, 'Search': _filterSearch},
+        filters: {
+          'Type': _filterType,
+          'Category': _filterCategory,
+          'Payment': _filterPayment,
+          'Search': _filterSearch,
+        },
       );
+
       _generatedPdfFile = file;
       await Future.delayed(const Duration(seconds: 2)); 
+
       if (mounted) setState(() => _isLoadingReport = false);
       if (mounted) _showSuccessModal();
+
     } catch (e) {
       if (mounted) setState(() => _isLoadingReport = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
+  // --- SAVE DIALOG ---
   void _showSaveDialog() {
     TextEditingController nameCtrl = TextEditingController(text: "${widget.cashbookName}_Report");
     showDialog(
@@ -146,7 +168,10 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel", style: GoogleFonts.outfit(color: Colors.grey))),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel", style: GoogleFonts.outfit(color: Colors.grey)),
+          ),
           ElevatedButton(
             onPressed: () async {
               if (_generatedPdfFile != null && nameCtrl.text.isNotEmpty) {
@@ -168,7 +193,10 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
 
   void _showSuccessModal() {
     showModalBottomSheet(
-      context: context, backgroundColor: Colors.transparent, isDismissible: false, enableDrag: false,
+      context: context,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
       builder: (context) => Container(
         decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
@@ -183,9 +211,12 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
             Text("Your PDF has been generated successfully.", style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade500)),
             const SizedBox(height: 32),
             SizedBox(
-              width: double.infinity, height: 48,
+              width: double.infinity,
+              height: 48,
               child: ElevatedButton.icon(
-                onPressed: () { if (_generatedPdfFile != null) OpenFile.open(_generatedPdfFile!.path); },
+                onPressed: () { 
+                  if (_generatedPdfFile != null) OpenFile.open(_generatedPdfFile!.path);
+                },
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 icon: Icon(PhosphorIcons.eye(PhosphorIconsStyle.bold), color: Colors.white),
                 label: Text("See Preview", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
@@ -193,9 +224,10 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              width: double.infinity, height: 48,
+              width: double.infinity,
+              height: 48,
               child: OutlinedButton.icon(
-                onPressed: _showSaveDialog,
+                onPressed: _showSaveDialog, 
                 style: OutlinedButton.styleFrom(backgroundColor: Colors.white, side: BorderSide(color: Colors.grey.shade200), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 icon: Icon(PhosphorIcons.downloadSimple(PhosphorIconsStyle.bold), color: const Color(0xFF334155)),
                 label: Text("Save To Downloads", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
@@ -207,7 +239,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
 
-  // --- ANIMATED GRID ---
+  // --- ANIMATED GRID LAYOUT ---
   Widget _buildAnimatedGrid() {
     bool isHidden = _reportType == 'category' || _reportType == 'payment';
 
@@ -216,62 +248,37 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         double maxWidth = constraints.maxWidth;
         double gap = 12.0;
 
-        // 3-Column Params
+        // Dimensions
         double w3 = (maxWidth - 2 * gap) / 3;
-        // 2-Column Params
         double w2 = (maxWidth - gap) / 2;
-        
-        double fixedHeight = 60.0;
+        double fixedHeight = 60.0; 
         double totalH = 2 * fixedHeight + gap; 
-        double currentW = isHidden ? w2 : w3;
-
-        // ANIMATION LOGIC:
-        // Visible items move to their new 2-column or 3-column slots.
-        // Disappearing items STAY at their 3-column position but scale to 0.
+        
+        // Centered 2-Col Calculation: (MaxWidth - 2ColWidth) / 2
+        double sideMargin = (maxWidth - (w2 * 2 + gap)) / 2;
 
         return SizedBox(
           height: totalH,
           child: Stack(
             children: [
-              // 1. DATE: (Always Top Left)
-              _animItem(0, 0, 0, currentW, 1.0, _buildFilterBtn("Date", _filterDate, () => _openFilterModal('date'))),
+              // 0. DATE (Left)
+              _animItem(0, isHidden ? sideMargin : 0, 0, isHidden ? w2 : w3, 1, _buildFilterBtn("Date", _filterDate, () => _openFilterModal('date'))),
 
-              // 2. TYPE: (Disappears)
-              _animItem(1, 
-                w3 + gap, // Always stays at middle slot of 3-col layout
-                0, 
-                w3, 
-                isHidden ? 0.0 : 1.0, // Scale to 0
-                _buildFilterBtn("Type", _filterType, () => _openFilterModal('type')),
-                shouldScale: true),
+              // 1. TYPE (Implodes in place)
+              // left: Stays at w3+gap (Col 2). Scale: goes to 0.
+              _animItem(1, w3 + gap, 0, w3, isHidden ? 0 : 1, _buildFilterBtn("Type", _filterType, () => _openFilterModal('type')), shouldScale: true),
 
-              // 3. CATEGORY: (Right -> Slides to Middle)
-              _animItem(2, 
-                isHidden ? (w2 + gap) : (2 * (w3 + gap)), // Moves from col 3 to col 2
-                0, 
-                currentW, 
-                1.0, 
-                _buildFilterBtn("Category", _filterCategory, () => _openFilterModal('category'))),
+              // 2. CATEGORY (Right -> Slides to Center Row 1)
+              _animItem(2, isHidden ? (sideMargin + w2 + gap) : (2 * (w3 + gap)), 0, isHidden ? w2 : w3, 1, _buildFilterBtn("Category", _filterCategory, () => _openFilterModal('category'))),
 
-              // 4. PAYMENT: (Always Bottom Left)
-              _animItem(3, 0, fixedHeight + gap, currentW, 1.0, _buildFilterBtn("Payment", _filterPayment, () => _openFilterModal('payment'))),
+              // 3. PAYMENT (Bottom Left -> Center Row 2)
+              _animItem(3, isHidden ? sideMargin : 0, fixedHeight + gap, isHidden ? w2 : w3, 1, _buildFilterBtn("Payment", _filterPayment, () => _openFilterModal('payment'))),
 
-              // 5. SORT: (Disappears)
-              _animItem(4, 
-                w3 + gap, // Always stays at middle slot
-                fixedHeight + gap, 
-                w3, 
-                isHidden ? 0.0 : 1.0, // Scale to 0
-                _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort')),
-                shouldScale: true),
+              // 4. SORT (Implodes in place)
+              _animItem(4, w3 + gap, fixedHeight + gap, w3, isHidden ? 0 : 1, _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort')), shouldScale: true),
 
-              // 6. SEARCH: (Right -> Slides to Middle)
-              _animItem(5, 
-                isHidden ? (w2 + gap) : (2 * (w3 + gap)), // Moves from col 3 to col 2
-                fixedHeight + gap, 
-                currentW, 
-                1.0, 
-                _buildFilterBtn("Search", _filterSearch, () => _openFilterModal('search'))),
+              // 5. SEARCH (Right -> Slides to Center Row 2)
+              _animItem(5, isHidden ? (sideMargin + w2 + gap) : (2 * (w3 + gap)), fixedHeight + gap, isHidden ? w2 : w3, 1, _buildFilterBtn("Search", _filterSearch, () => _openFilterModal('search'))),
             ],
           ),
         );
@@ -323,13 +330,8 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
       ),
     );
   }
-
-  Widget _buildRadioItem(String val, String text, IconData icon) {
-    bool isSelected = _reportType == val;
-    return GestureDetector(onTap: () => setState(() => _reportType = val), child: AnimatedContainer(duration: const Duration(milliseconds: 200), padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: isSelected ? const Color(0xFFF8FAFC) : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelected ? const Color(0xFF4F46E5) : Colors.grey.shade200, width: isSelected ? 2 : 1), boxShadow: [if (isSelected) BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4)) else BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)]), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFEEF2FF), shape: BoxShape.circle), child: Icon(icon, color: const Color(0xFF4F46E5), size: 20)), const SizedBox(width: 12), Text(text, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF1E293B))), const Spacer(), AnimatedScale(scale: isSelected ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: Icon(PhosphorIcons.checkCircle(PhosphorIconsStyle.fill), color: const Color(0xFF4F46E5), size: 24))])));
-  }
-
-  // Helpers for modals, dates...
+  
+  // Helpers
   void _openFilterModal(String type) {
     if (type == 'date') { _showDateInputs = false; _tempStartDate = null; _tempEndDate = null; }
     showModalBottomSheet(context: context, backgroundColor: Colors.transparent, isScrollControlled: true, builder: (context) => StatefulBuilder(builder: (context, setModalState) => Container(decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))), padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 40), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(3)))), const SizedBox(height: 24), Text(_getModalTitle(type), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))), const SizedBox(height: 16), if (type == 'search') _buildSearchInput() else if (type == 'date') _buildDateOptions(setModalState) else _buildListOptions(type)]))));
@@ -351,47 +353,8 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
 
   Widget _buildModalItem(String text, bool isSelected, VoidCallback onTap) { return InkWell(onTap: onTap, child: Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16), decoration: BoxDecoration(color: isSelected ? const Color(0xFFEEF2FF) : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(text, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF334155))), if (isSelected) Icon(PhosphorIcons.check(PhosphorIconsStyle.bold), color: const Color(0xFF4F46E5), size: 18)]))); }
 
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
-          appBar: AppBar(backgroundColor: Colors.white, elevation: 0, leading: IconButton(icon: Icon(PhosphorIcons.arrowLeft(PhosphorIconsStyle.bold), color: const Color(0xFF475569)), onPressed: () => Navigator.pop(context)), title: Text("Generate Report", style: GoogleFonts.outfit(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold))),
-          body: _isLoadingMeta ? const Center(child: CircularProgressIndicator()) : Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("FILTERS", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
-                      const SizedBox(height: 12),
-                      _buildAnimatedGrid(), // UPDATED
-                      const SizedBox(height: 32),
-                      Text("REPORT FORMAT", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
-                      const SizedBox(height: 12),
-                      _buildRadioItem("all", "All Entries List", PhosphorIcons.listDashes(PhosphorIconsStyle.bold)),
-                      const SizedBox(height: 12),
-                      _buildRadioItem("day", "Day-Wise Summary", PhosphorIcons.calendarCheck(PhosphorIconsStyle.bold)),
-                      const SizedBox(height: 12),
-                      _buildRadioItem("month", "Month-Wise Summary", PhosphorIcons.calendar(PhosphorIconsStyle.bold)),
-                      const SizedBox(height: 12),
-                      _buildRadioItem("category", "Category-Wise Summary", PhosphorIcons.tag(PhosphorIconsStyle.bold)),
-                      const SizedBox(height: 12),
-                      _buildRadioItem("payment", "Payment Mode Summary", PhosphorIcons.creditCard(PhosphorIconsStyle.bold)),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
-                ),
-              ),
-              Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade100))), child: SizedBox(width: double.infinity, height: 48, child: ElevatedButton.icon(onPressed: _generateReport, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 8, shadowColor: const Color(0xFFC7D2FE)), icon: Icon(PhosphorIcons.filePdf(PhosphorIconsStyle.bold), color: Colors.white), label: Text("Generate PDF Report", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))))),
-            ],
-          ),
-        ),
-        if (_isLoadingReport) Material(color: Colors.white.withOpacity(0.95), child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Lottie.asset('assets/animations/paperscan.json', width: 250, height: 250), Text("Processing Data...", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5))), const SizedBox(height: 4), Text("Please wait a moment", style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade400))]))),
-      ],
-    );
+  Widget _buildRadioItem(String val, String text, IconData icon) {
+    bool isSelected = _reportType == val;
+    return GestureDetector(onTap: () => setState(() => _reportType = val), child: AnimatedContainer(duration: const Duration(milliseconds: 200), padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: isSelected ? const Color(0xFFF8FAFC) : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelected ? const Color(0xFF4F46E5) : Colors.grey.shade200, width: isSelected ? 2 : 1), boxShadow: [if (isSelected) BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4)) else BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)]), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFEEF2FF), shape: BoxShape.circle), child: Icon(icon, color: const Color(0xFF4F46E5), size: 20)), const SizedBox(width: 12), Text(text, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF1E293B))), const Spacer(), AnimatedScale(scale: isSelected ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: Icon(PhosphorIcons.checkCircle(PhosphorIconsStyle.fill), color: const Color(0xFF4F46E5), size: 24))])));
   }
 }
