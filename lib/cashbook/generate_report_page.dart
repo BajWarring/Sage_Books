@@ -38,6 +38,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
   bool _isLoadingReport = false;
   File? _generatedPdfFile;
   
+  // Date Range
   DateTime? _startDate;
   DateTime? _endDate;
   DateTime? _tempStartDate;
@@ -118,7 +119,7 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
       }
 
       File file = await PdfGenerator.generateReport(
-        cashbookName: widget.cashbookName,
+        cashbookName: widget.cashbookName, // Passing REAL name
         entries: finalEntries,
         reportType: _reportType,
         filters: {
@@ -177,8 +178,8 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
               if (_generatedPdfFile != null && nameCtrl.text.isNotEmpty) {
                 await PdfGenerator.saveToDownloads(_generatedPdfFile!, nameCtrl.text);
                 if (mounted) {
-                  Navigator.pop(context); 
-                  Navigator.pop(context); 
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context); // Close Success Modal
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved to Downloads!")));
                 }
               }
@@ -248,13 +249,15 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
         double maxWidth = constraints.maxWidth;
         double gap = 12.0;
 
-        // Dimensions
+        // 3-Column Params
         double w3 = (maxWidth - 2 * gap) / 3;
+        // 2-Column Params
         double w2 = (maxWidth - gap) / 2;
-        double fixedHeight = 60.0; 
+        
+        double fixedHeight = 60.0;
         double totalH = 2 * fixedHeight + gap; 
         
-        // Centered 2-Col Calculation: (MaxWidth - 2ColWidth) / 2
+        // Center the 2-column grid
         double sideMargin = (maxWidth - (w2 * 2 + gap)) / 2;
 
         return SizedBox(
@@ -264,20 +267,31 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
               // 0. DATE (Left)
               _animItem(0, isHidden ? sideMargin : 0, 0, isHidden ? w2 : w3, 1, _buildFilterBtn("Date", _filterDate, () => _openFilterModal('date'))),
 
-              // 1. TYPE (Implodes in place)
-              // left: Stays at w3+gap (Col 2). Scale: goes to 0.
-              _animItem(1, w3 + gap, 0, w3, isHidden ? 0 : 1, _buildFilterBtn("Type", _filterType, () => _openFilterModal('type')), shouldScale: true),
+              // 1. TYPE (IMPLOSION FIX: Stays at 3-col position, scales to 0)
+              _animItem(1, 
+                w3 + gap, // Keep original left position
+                0, 
+                w3,       // Keep original width
+                isHidden ? 0 : 1, // Scale only
+                _buildFilterBtn("Type", _filterType, () => _openFilterModal('type')), 
+                shouldScale: true),
 
-              // 2. CATEGORY (Right -> Slides to Center Row 1)
+              // 2. CATEGORY (Slides from Right to Center)
               _animItem(2, isHidden ? (sideMargin + w2 + gap) : (2 * (w3 + gap)), 0, isHidden ? w2 : w3, 1, _buildFilterBtn("Category", _filterCategory, () => _openFilterModal('category'))),
 
-              // 3. PAYMENT (Bottom Left -> Center Row 2)
+              // 3. PAYMENT (Bottom Left -> Center)
               _animItem(3, isHidden ? sideMargin : 0, fixedHeight + gap, isHidden ? w2 : w3, 1, _buildFilterBtn("Payment", _filterPayment, () => _openFilterModal('payment'))),
 
-              // 4. SORT (Implodes in place)
-              _animItem(4, w3 + gap, fixedHeight + gap, w3, isHidden ? 0 : 1, _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort')), shouldScale: true),
+              // 4. SORT (IMPLOSION FIX: Stays at 3-col position, scales to 0)
+              _animItem(4, 
+                w3 + gap, // Keep original left position
+                fixedHeight + gap, 
+                w3,       // Keep original width
+                isHidden ? 0 : 1, // Scale only
+                _buildFilterBtn("Sort By", _filterSort, () => _openFilterModal('sort')), 
+                shouldScale: true),
 
-              // 5. SEARCH (Right -> Slides to Center Row 2)
+              // 5. SEARCH (Slides from Right to Center)
               _animItem(5, isHidden ? (sideMargin + w2 + gap) : (2 * (w3 + gap)), fixedHeight + gap, isHidden ? w2 : w3, 1, _buildFilterBtn("Search", _filterSearch, () => _openFilterModal('search'))),
             ],
           ),
@@ -331,7 +345,6 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
     );
   }
   
-  // Helpers
   void _openFilterModal(String type) {
     if (type == 'date') { _showDateInputs = false; _tempStartDate = null; _tempEndDate = null; }
     showModalBottomSheet(context: context, backgroundColor: Colors.transparent, isScrollControlled: true, builder: (context) => StatefulBuilder(builder: (context, setModalState) => Container(decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))), padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 40), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(3)))), const SizedBox(height: 24), Text(_getModalTitle(type), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))), const SizedBox(height: 16), if (type == 'search') _buildSearchInput() else if (type == 'date') _buildDateOptions(setModalState) else _buildListOptions(type)]))));
@@ -356,5 +369,49 @@ class _GenerateReportPageState extends State<GenerateReportPage> {
   Widget _buildRadioItem(String val, String text, IconData icon) {
     bool isSelected = _reportType == val;
     return GestureDetector(onTap: () => setState(() => _reportType = val), child: AnimatedContainer(duration: const Duration(milliseconds: 200), padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: isSelected ? const Color(0xFFF8FAFC) : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelected ? const Color(0xFF4F46E5) : Colors.grey.shade200, width: isSelected ? 2 : 1), boxShadow: [if (isSelected) BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4)) else BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)]), child: Row(children: [Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFEEF2FF), shape: BoxShape.circle), child: Icon(icon, color: const Color(0xFF4F46E5), size: 20)), const SizedBox(width: 12), Text(text, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF1E293B))), const Spacer(), AnimatedScale(scale: isSelected ? 1.0 : 0.0, duration: const Duration(milliseconds: 200), child: Icon(PhosphorIcons.checkCircle(PhosphorIconsStyle.fill), color: const Color(0xFF4F46E5), size: 24))])));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          appBar: AppBar(backgroundColor: Colors.white, elevation: 0, leading: IconButton(icon: Icon(PhosphorIcons.arrowLeft(PhosphorIconsStyle.bold), color: const Color(0xFF475569)), onPressed: () => Navigator.pop(context)), title: Text("Generate Report", style: GoogleFonts.outfit(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold))),
+          body: _isLoadingMeta ? const Center(child: CircularProgressIndicator()) : Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("FILTERS", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
+                      const SizedBox(height: 12),
+                      _buildAnimatedGrid(), // The fixed grid
+                      const SizedBox(height: 32),
+                      Text("REPORT FORMAT", style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade400, letterSpacing: 1.0)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("all", "All Entries List", PhosphorIcons.listDashes(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("day", "Day-Wise Summary", PhosphorIcons.calendarCheck(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("month", "Month-Wise Summary", PhosphorIcons.calendar(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("category", "Category-Wise Summary", PhosphorIcons.tag(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 12),
+                      _buildRadioItem("payment", "Payment Mode Summary", PhosphorIcons.creditCard(PhosphorIconsStyle.bold)),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ),
+              Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade100))), child: SizedBox(width: double.infinity, height: 48, child: ElevatedButton.icon(onPressed: _generateReport, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 8, shadowColor: const Color(0xFFC7D2FE)), icon: Icon(PhosphorIcons.filePdf(PhosphorIconsStyle.bold), color: Colors.white), label: Text("Generate PDF Report", style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white))))),
+            ],
+          ),
+        ),
+        if (_isLoadingReport) Material(color: Colors.white.withOpacity(0.95), child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Lottie.asset('assets/animations/paperscan.json', width: 250, height: 250), Text("Processing Data...", style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5))), const SizedBox(height: 4), Text("Please wait a moment", style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade400))]))),
+      ],
+    );
   }
 }
