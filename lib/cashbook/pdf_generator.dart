@@ -99,7 +99,6 @@ class PdfGenerator {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            // Using the passed name variable directly
             pw.Text(name, style: pw.TextStyle(font: fontBold, fontSize: 22, color: primaryColor)),
             pw.SizedBox(height: 4),
             pw.Text("OFFICIAL REPORT", style: pw.TextStyle(font: fontBold, fontSize: 9, color: greyColor, letterSpacing: 1.5)),
@@ -194,10 +193,10 @@ class PdfGenerator {
 
     return pw.TableHelper.fromTextArray(
       headers: ['DATE', 'REMARKS', 'CATEGORY', 'MODE', 'IN (+)', 'OUT (-)', 'BAL'],
-      // COLUMN WIDTHS: Critical fix for text wrapping
+      // FIXED: Specific widths to prevent cutting text
       columnWidths: {
         0: const pw.FixedColumnWidth(55), // Date
-        1: const pw.FlexColumnWidth(3),   // Remarks (Takes most space)
+        1: const pw.FlexColumnWidth(3),   // Remarks (Wider)
         2: const pw.FixedColumnWidth(55), // Category
         3: const pw.FixedColumnWidth(45), // Mode
         4: const pw.FixedColumnWidth(50), // In
@@ -207,7 +206,7 @@ class PdfGenerator {
       headerStyle: pw.TextStyle(font: fontBold, color: white, fontSize: 9),
       headerDecoration: const pw.BoxDecoration(color: primaryColor),
       headerAlignment: pw.Alignment.center,
-      cellPadding: const pw.EdgeInsets.all(0), // Set to 0 to allow footer container to fill cell
+      cellPadding: const pw.EdgeInsets.all(0),
       border: pw.TableBorder.all(color: greyColor, width: 0.5),
       cellAlignment: pw.Alignment.center,
       data: data.asMap().entries.map((entry) {
@@ -215,16 +214,14 @@ class PdfGenerator {
 
         // --- FOOTER ROW ---
         if (row[0] == null) {
-          // Wrap content in a Colored Container to simulate Row Background
           pw.Widget footerCell(String text) {
              return pw.Container(
-               color: primaryColor, // FOOTER COLOR FIX
+               color: primaryColor, // Matches Header
                padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 2),
                alignment: pw.Alignment.center,
                child: pw.Text(text, style: pw.TextStyle(font: fontBold, color: white, fontSize: 8))
              );
           }
-          
           return [
             footerCell('TOTAL'),
             footerCell(''),
@@ -299,7 +296,7 @@ class PdfGenerator {
       tableData.add([key, val['count']!.toInt().toString(), val['in']!, val['out']!, net]);
     });
 
-    tableData.add([null]); // Footer marker
+    tableData.add([null]); 
 
     String firstCol = type.toUpperCase();
     if(type == 'day') firstCol = "DATE";
@@ -317,7 +314,6 @@ class PdfGenerator {
         final index = entry.key;
         final row = entry.value;
 
-        // Footer Row with Color
         if (row[0] == null) {
            pw.Widget footerCell(String text) {
              return pw.Container(
