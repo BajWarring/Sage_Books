@@ -28,7 +28,7 @@ class PdfGenerator {
     final font = await PdfGoogleFonts.outfitRegular();
     final fontBold = await PdfGoogleFonts.outfitBold();
 
-    // 1. CALCULATE TOTALS & SORT
+    // 1. CALCULATE TOTALS
     double totalIn = 0;
     double totalOut = 0;
     entries.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
@@ -154,7 +154,7 @@ class PdfGenerator {
     );
   }
 
-  // --- ACTIVE FILTERS ---
+  // --- FILTERS ---
   static pw.Widget _buildActiveFilters(Map<String, String> filters, pw.Font fontBold) {
     return pw.Container(
       width: double.infinity,
@@ -177,7 +177,7 @@ class PdfGenerator {
     );
   }
 
-  // --- TABLE: ALL ENTRIES ---
+  // --- TABLE ---
   static pw.Widget _buildAllEntriesTable(List<Map<String, dynamic>> entries, pw.Font fontBold, double totalIn, double totalOut, double netBalance) {
     double runningBal = 0;
     
@@ -188,20 +188,18 @@ class PdfGenerator {
       if (isInc) runningBal += amt; else runningBal -= amt;
       data.add([e, isInc, amt, runningBal]); 
     }
-    // Footer Marker
-    data.add([null]); 
+    data.add([null]); // Footer marker
 
     return pw.TableHelper.fromTextArray(
       headers: ['DATE', 'REMARKS', 'CATEGORY', 'MODE', 'IN (+)', 'OUT (-)', 'BAL'],
-      // FIXED: Specific widths to prevent cutting text
       columnWidths: {
-        0: const pw.FixedColumnWidth(55), // Date
-        1: const pw.FlexColumnWidth(3),   // Remarks (Wider)
-        2: const pw.FixedColumnWidth(55), // Category
-        3: const pw.FixedColumnWidth(45), // Mode
-        4: const pw.FixedColumnWidth(50), // In
-        5: const pw.FixedColumnWidth(50), // Out
-        6: const pw.FixedColumnWidth(55), // Balance
+        0: const pw.FixedColumnWidth(55), 
+        1: const pw.FlexColumnWidth(3),
+        2: const pw.FixedColumnWidth(55),
+        3: const pw.FixedColumnWidth(45), 
+        4: const pw.FixedColumnWidth(50), 
+        5: const pw.FixedColumnWidth(50), 
+        6: const pw.FixedColumnWidth(55),
       },
       headerStyle: pw.TextStyle(font: fontBold, color: white, fontSize: 9),
       headerDecoration: const pw.BoxDecoration(color: primaryColor),
@@ -212,11 +210,11 @@ class PdfGenerator {
       data: data.asMap().entries.map((entry) {
         final row = entry.value;
 
-        // --- FOOTER ROW ---
+        // Footer Row
         if (row[0] == null) {
           pw.Widget footerCell(String text) {
              return pw.Container(
-               color: primaryColor, // Matches Header
+               color: primaryColor,
                padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 2),
                alignment: pw.Alignment.center,
                child: pw.Text(text, style: pw.TextStyle(font: fontBold, color: white, fontSize: 8))
@@ -233,7 +231,7 @@ class PdfGenerator {
           ];
         }
 
-        // --- NORMAL ROW ---
+        // Normal Row
         final e = row[0] as Map<String, dynamic>;
         final isInc = row[1] as bool;
         final amt = row[2] as double;
@@ -242,12 +240,7 @@ class PdfGenerator {
         final bgColor = entry.key % 2 == 1 ? lightGrey : white;
 
         pw.Widget cell(pw.Widget child) {
-          return pw.Container(
-            color: bgColor,
-            padding: const pw.EdgeInsets.all(5),
-            alignment: pw.Alignment.center,
-            child: child
-          );
+          return pw.Container(color: bgColor, padding: const pw.EdgeInsets.all(5), alignment: pw.Alignment.center, child: child);
         }
 
         return [
@@ -316,20 +309,9 @@ class PdfGenerator {
 
         if (row[0] == null) {
            pw.Widget footerCell(String text) {
-             return pw.Container(
-               color: primaryColor,
-               padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-               alignment: pw.Alignment.center,
-               child: pw.Text(text, style: pw.TextStyle(font: fontBold, color: white, fontSize: 8))
-             );
+             return pw.Container(color: primaryColor, padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 2), alignment: pw.Alignment.center, child: pw.Text(text, style: pw.TextStyle(font: fontBold, color: white, fontSize: 8)));
            }
-           return [
-            footerCell('TOTAL'),
-            footerCell(sumCount.toString()),
-            footerCell(sumIn.toStringAsFixed(2)),
-            footerCell(sumOut.toStringAsFixed(2)),
-            footerCell(sumNet.toStringAsFixed(2)),
-           ];
+           return [footerCell('TOTAL'), footerCell(sumCount.toString()), footerCell(sumIn.toStringAsFixed(2)), footerCell(sumOut.toStringAsFixed(2)), footerCell(sumNet.toStringAsFixed(2))];
         }
 
         final bgColor = index % 2 == 1 ? lightGrey : white;
