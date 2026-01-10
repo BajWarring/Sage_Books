@@ -3,20 +3,37 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sage_books/login_page.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 
 class SettingsTab extends StatelessWidget {
   final User user;
 
   const SettingsTab({super.key, required this.user});
 
-  Future<void> _signOut(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    // Navigate back to login
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-      (Route<dynamic> route) => false,
-    );
+    Future<void> _signOut(BuildContext context) async {
+    try {
+      // 1. Sign out from Firebase
+      await FirebaseAuth.instance.signOut();
+
+      // 2. FORCE Disconnect from Google (This clears the "Remembered Account")
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.disconnect();
+      }
+      
+      // Note: We don't need manual navigation here because the 
+      // StreamBuilder in main.dart will detect the logout 
+      // and automatically show the LoginPage.
+      
+    } catch (e) {
+      print("Error signing out: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error signing out: $e"))
+      );
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
